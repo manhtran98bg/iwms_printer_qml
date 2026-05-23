@@ -1,0 +1,28 @@
+<RCC>
+    <qresource prefix="/">
+        <file alias="icon_arrow_down">assets/icon/arrow_down.svg</file>
+        <file alias="icon_arrow_down_black">assets/icon/arrow_down_black.svg</file>
+        <file alias="icon_refresh">assets/icon/refresh.svg</file>
+        <file alias="icon_browse">assets/icon/browser.svg</file>
+        <file alias="icon_browser">assets/icon/browser.svg</file>
+        <file alias="icon_print">assets/icon/print.svg</file>
+        <file>assets/font/Roboto-Black.ttf</file>
+        <file>assets/font/Roboto-BlackItalic.ttf</file>
+        <file>assets/font/Roboto-Bold.ttf</file>
+        <file>assets/font/Roboto-BoldItalic.ttf</file>
+        <file>assets/font/Roboto-ExtraBold.ttf</file>
+        <file>assets/font/Roboto-ExtraBoldItalic.ttf</file>
+        <file>assets/font/Roboto-ExtraLight.ttf</file>
+        <file>assets/font/Roboto-ExtraLightItalic.ttf</file>
+        <file>assets/font/Roboto-Italic.ttf</file>
+        <file>assets/font/Roboto-Light.ttf</file>
+        <file>assets/font/Roboto-LightItalic.ttf</file>
+        <file>assets/font/Roboto-Medium.ttf</file>
+        <file>assets/font/Roboto-MediumItalic.ttf</file>
+        <file>assets/font/Roboto-Regular.ttf</file>
+        <file>assets/font/Roboto-SemiBold.ttf</file>
+        <file>assets/font/Roboto-SemiBoldItalic.ttf</file>
+        <file>assets/font/Roboto-Thin.ttf</file>
+        <file>assets/font/Roboto-ThinItalic.ttf</file>
+    </qresource>
+</RCC>
