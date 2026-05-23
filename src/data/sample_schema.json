@@ -1,0 +1,17 @@
+{
+  "templateFile": "sample_template.zpl",
+  "columns": 2,
+  "requiredFields": ["kit", "sku", "qty"],
+  "sampleLabels": [
+    {
+      "kit": "LOAI BO",
+      "sku": "",
+      "qty": ""
+    },
+    {
+      "kit": "K123456",
+      "sku": "12345678",
+      "qty": "4321"
+    }
+  ]
+}
