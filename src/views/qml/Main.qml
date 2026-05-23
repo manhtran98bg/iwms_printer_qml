@@ -1,5 +1,6 @@
 import QtQuick 2.15
 import QtQuick.Controls 2.15
+import QtQuick.Window 2.15
 import "pages"
 
 ApplicationWindow {
@@ -9,8 +10,10 @@ ApplicationWindow {
     minimumWidth: 900
     minimumHeight: 520
     visible: true
+    visibility: Window.Maximized
     title: mainViewModel.app_title
-    color: "#f5f7fa"
+    color: "#0d141d"
+    font.family: "Roboto"
 
     PrinterPage {
         anchors.fill: parent

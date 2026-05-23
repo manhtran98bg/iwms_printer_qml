@@ -1,6 +1,10 @@
 import signal
 
 from src.app import run
+try:
+    from . import resources_rc  # noqa: F401
+except ImportError:
+    resources_rc = None
 
 
 if __name__ == "__main__":
