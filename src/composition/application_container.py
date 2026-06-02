@@ -27,6 +27,7 @@ class ApplicationContainer:
             settings_repository=self.settings_repository_service,
             printer_discovery_service=self.printer_discovery_service,
             api_server_service=self.api_server_service,
+            print_workflow_service=self.print_workflow_service,
         )
         self.api_server_service.print_request_received.connect(
             self.print_workflow_service.submit
