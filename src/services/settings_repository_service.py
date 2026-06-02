@@ -47,18 +47,10 @@ class SettingsRepositoryService(QObject):
         api_url = str(config.api_url or "")
         if api_url and not api_url.endswith("/"):
             api_url += "/"
-        stamp_columns = config.stamp_columns
-        try:
-            stamp_columns = int(stamp_columns)
-        except (TypeError, ValueError):
-            stamp_columns = PrinterConfig().stamp_columns
-        if stamp_columns < 1:
-            stamp_columns = 1
         return PrinterConfig(
             api_url=api_url or PrinterConfig().api_url,
             template_path=str(config.template_path or ""),
             data_path=str(config.data_path or ""),
             printer_name=str(config.printer_name or ""),
-            stamp_columns=stamp_columns,
             required_fields=list(config.required_fields or []),
         )

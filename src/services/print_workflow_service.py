@@ -1,13 +1,16 @@
 from __future__ import annotations
 
+from datetime import datetime
+
 from PySide6.QtCore import QObject, Signal, Slot
 
 from src.core.errors import PrintRequestError
+from src.core.runtime_paths import APP_ENVIRONMENT_ROOT
 from src.models.printer_config import PrinterConfig
 from src.models.print_request import PrintRequest
-from src.services.print_spooler_service import PrintSpoolerService
+from src.services.printer_service import PrinterService
+from src.services.print_template_service import PrintTemplateService
 from src.services.settings_repository_service import SettingsRepositoryService
-from src.services.template_service import TemplateService
 
 
 class PrintWorkflowService(QObject):
@@ -48,13 +51,13 @@ class PrintWorkflowService(QObject):
     def __init__(
         self,
         settings_repository: SettingsRepositoryService,
-        template_service: TemplateService,
-        spooler_service: PrintSpoolerService,
+        print_template_service: PrintTemplateService,
+        printer_service: PrinterService,
     ) -> None:
         super().__init__()
         self._settings_repository = settings_repository
-        self._template_service = template_service
-        self._spooler_service = spooler_service
+        self._print_template_service = print_template_service
+        self._printer_service = printer_service
 
     @Slot(object)
     def submit(self, request: PrintRequest) -> None:
@@ -82,58 +85,79 @@ class PrintWorkflowService(QObject):
             config = self._settings_repository.load()
             self._validate_test_config(config)
             self._validate_request(request)
-            if self._is_zpl_printer(config.printer_name):
-                rendered_pages = self._print_raw(config, request)
-                page_count = len(rendered_pages)
-                print_mode = "raw"
-            else:
-                self._spooler_service.print_test_document(config.printer_name, request.labels)
-                page_count = 1
-                print_mode = "document"
+            rendered_pages = self._render_pages(config, request)
+            output_path = self._write_test_output(rendered_pages)
         except Exception as exc:
             self.print_failed.emit(str(exc))
             return
         self.print_finished.emit(
             {
                 "label_count": len(request.labels),
-                "page_count": page_count,
-                "printer_name": config.printer_name,
-                "print_mode": print_mode,
+                "page_count": len(rendered_pages),
+                "print_mode": "txt",
+                "output_path": str(output_path),
             }
         )
 
+    def preview(self, request: PrintRequest) -> str:
+        config = self._settings_repository.load()
+        if not getattr(config, "template_path", ""):
+            return ""
+        template_text = self._print_template_service.load_template(config.template_path)
+        columns = self._print_template_service.discover_column_count(template_text)
+        rendered_pages = self._print_template_service.render(
+            template_text,
+            request.labels,
+            columns,
+        )
+        return "\n".join(rendered_pages)
+
+    def template_column_count(self, template_path: str) -> int:
+        template_text = self._print_template_service.load_template(template_path)
+        return self._print_template_service.discover_column_count(template_text)
+
+    def template_fields(self, template_path: str) -> list[str]:
+        template_text = self._print_template_service.load_template(template_path)
+        return self._print_template_service.discover_fields(template_text)
+
     def _validate_config(self, config: object) -> None:
         if not getattr(config, "printer_name", ""):
-            raise PrintRequestError("Printer is not selected.")
+            raise PrintRequestError("Ch\u01b0a ch\u1ecdn m\u00e1y in.")
         if not getattr(config, "template_path", ""):
-            raise PrintRequestError("Template file is not selected.")
-        if getattr(config, "stamp_columns", 0) < 1:
-            raise PrintRequestError("Stamp columns must be greater than zero.")
+            raise PrintRequestError("Ch\u01b0a ch\u1ecdn file template.")
 
     def _validate_test_config(self, config: object) -> None:
-        if not getattr(config, "printer_name", ""):
-            raise PrintRequestError("Printer is not selected.")
-        if getattr(config, "stamp_columns", 0) < 1:
-            raise PrintRequestError("Stamp columns must be greater than zero.")
-        if self._is_zpl_printer(getattr(config, "printer_name", "")):
-            self._validate_config(config)
+        if not getattr(config, "template_path", ""):
+            raise PrintRequestError("Ch\u01b0a ch\u1ecdn file template.")
 
     def _validate_request(self, request: PrintRequest) -> None:
         if not request.labels:
-            raise PrintRequestError("Print request has no labels.")
+            raise PrintRequestError("Request in kh\u00f4ng c\u00f3 tem.")
         for index, label in enumerate(request.labels):
             if not isinstance(label, dict):
-                raise PrintRequestError(f"Label at index {index} must be an object.")
+                raise PrintRequestError(f"Tem t\u1ea1i index {index} ph\u1ea3i l\u00e0 object.")
 
     def _print_raw(self, config: PrinterConfig, request: PrintRequest) -> list[str]:
-        template_text = self._template_service.load_template(config.template_path)
-        rendered_pages = self._template_service.render(
+        rendered_pages = self._render_pages(config, request)
+        self._printer_service.print_raw(config.printer_name, rendered_pages)
+        return rendered_pages
+
+    def _render_pages(self, config: PrinterConfig, request: PrintRequest) -> list[str]:
+        template_text = self._print_template_service.load_template(config.template_path)
+        columns = self._print_template_service.discover_column_count(template_text)
+        return self._print_template_service.render(
             template_text,
             request.labels,
-            config.stamp_columns,
+            columns,
         )
-        self._spooler_service.print_raw(config.printer_name, rendered_pages)
-        return rendered_pages
+
+    def _write_test_output(self, rendered_pages: list[str]):
+        output_dir = APP_ENVIRONMENT_ROOT / "test_output"
+        output_dir.mkdir(parents=True, exist_ok=True)
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        output_path = output_dir / f"test_print_{timestamp}.txt"
+        output_path.write_text("\n".join(rendered_pages), encoding="utf-8")
+        return output_path
 
     def _is_zpl_printer(self, printer_name: str) -> bool:
         normalized_name = f" {printer_name.strip().casefold()} "

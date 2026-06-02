@@ -20,7 +20,7 @@ class ApiEndpoint:
     path: str
 
 
-class ApiServerService(QObject):
+class ServerHandlerService(QObject):
     """Local FastAPI server that exposes the print endpoint."""
 
     started = Signal(str)
@@ -47,7 +47,7 @@ class ApiServerService(QObject):
             app = self._create_app(endpoint.path)
             self._server = self._create_uvicorn_server(app, endpoint.host, endpoint.port)
         except Exception as exc:
-            self.failed.emit(f"Could not start API server: {exc}")
+            self.failed.emit(f"Kh\u00f4ng th\u1ec3 kh\u1edfi \u0111\u1ed9ng m\u00e1y ch\u1ee7 API: {exc}")
             return
 
         self._url = endpoint.display_url
@@ -85,7 +85,7 @@ class ApiServerService(QObject):
                 self._server.run()
         except Exception as exc:
             self._running = False
-            self.failed.emit(f"API server stopped unexpectedly: {exc}")
+            self.failed.emit(f"M\u00e1y ch\u1ee7 API d\u1eebng b\u1ea5t th\u01b0\u1eddng: {exc}")
         finally:
             self._running = False
 
@@ -104,7 +104,7 @@ class ApiServerService(QObject):
 
         @app.get(path)
         async def health_check() -> PlainTextResponse:
-            return PlainTextResponse("Welcome")
+            return PlainTextResponse("San sang")
 
         @app.options(path)
         async def preflight() -> Response:
@@ -119,7 +119,7 @@ class ApiServerService(QObject):
                 return JSONResponse(
                     ApiResponse(
                         success=True,
-                        message="Print job accepted",
+                        message="Da nhan lenh in",
                     ).to_dict()
                 )
             except Exception as exc:
@@ -146,13 +146,13 @@ class ApiServerService(QObject):
     def _parse_print_request(self, body: Any) -> PrintRequest:
         print_request = PrintRequest.from_compatible_body(body)
         if not print_request.labels:
-            raise ValueError("Request body must contain at least one label.")
+            raise ValueError("Request body ph\u1ea3i c\u00f3 \u00edt nh\u1ea5t m\u1ed9t tem.")
         for index, label in enumerate(print_request.labels):
             if not isinstance(label, dict):
-                raise ValueError(f"Label at index {index} must be an object.")
+                raise ValueError(f"Tem t\u1ea1i index {index} ph\u1ea3i l\u00e0 object.")
             for key, value in label.items():
                 if not isinstance(key, str):
-                    raise ValueError(f"Label at index {index} has a non-string field name.")
+                    raise ValueError(f"Tem t\u1ea1i index {index} c\u00f3 t\u00ean field kh\u00f4ng ph\u1ea3i string.")
                 if value is not None and not isinstance(value, str):
                     label[key] = str(value)
         return print_request
@@ -160,18 +160,18 @@ class ApiServerService(QObject):
     def _parse_endpoint(self, url: str) -> ApiEndpoint:
         normalized_url = (url or "").strip()
         if not normalized_url:
-            raise ValueError("API URL is empty.")
+            raise ValueError("URL API \u0111ang tr\u1ed1ng.")
         if not normalized_url.endswith("/"):
             normalized_url += "/"
         parsed = urlparse(normalized_url)
         if parsed.scheme not in {"http", "https"}:
-            raise ValueError("API URL must start with http:// or https://.")
+            raise ValueError("URL API ph\u1ea3i b\u1eaft \u0111\u1ea7u b\u1eb1ng http:// ho\u1eb7c https://.")
         if parsed.scheme == "https":
-            raise ValueError("HTTPS is not supported by the local API server yet.")
+            raise ValueError("M\u00e1y ch\u1ee7 API local ch\u01b0a h\u1ed7 tr\u1ee3 HTTPS.")
         if not parsed.hostname:
-            raise ValueError("API URL must include a host.")
+            raise ValueError("URL API ph\u1ea3i c\u00f3 host.")
         if parsed.port is None:
-            raise ValueError("API URL must include a port.")
+            raise ValueError("URL API ph\u1ea3i c\u00f3 port.")
 
         host = parsed.hostname
         bind_host = "0.0.0.0" if host in {"+", "*"} else host
@@ -192,4 +192,4 @@ class ApiServerService(QObject):
             try:
                 probe.bind((check_host, port))
             except OSError as exc:
-                raise ValueError(f"Port {port} is not available on {host}.") from exc
+                raise ValueError(f"Port {port} kh\u00f4ng kh\u1ea3 d\u1ee5ng tr\u00ean {host}.") from exc

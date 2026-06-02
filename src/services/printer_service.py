@@ -10,18 +10,24 @@ from PySide6.QtCore import QObject
 from src.core.errors import SpoolerError
 
 
-class PrintSpoolerService(QObject):
-    """Sends print jobs to Windows printers."""
+class PrinterService(QObject):
+    """Lists available printers and sends print jobs to Windows printers."""
 
     def __init__(self, encoding: str = "utf-8") -> None:
         super().__init__()
         self._encoding = encoding
 
+    def installed_printers(self) -> list[str]:
+        printers = self._printers_from_win32print()
+        if not printers:
+            printers = self._printers_from_qt_print_support()
+        return sorted(dict.fromkeys(printers), key=str.casefold)
+
     def print_raw(self, printer_name: str, zpl_pages: list[str]) -> None:
         if not printer_name or not printer_name.strip():
-            raise SpoolerError("Printer name is required.")
+            raise SpoolerError("Thi\u1ebfu t\u00ean m\u00e1y in.")
         if not zpl_pages:
-            raise SpoolerError("Print data is empty.")
+            raise SpoolerError("D\u1eef li\u1ec7u in \u0111ang tr\u1ed1ng.")
         win32print = self._load_win32print()
 
         printer_handle: Any | None = None
@@ -34,7 +40,7 @@ class PrintSpoolerService(QObject):
                 ("Zebra Label", None, "RAW"),
             )
             if not job_id:
-                raise SpoolerError(f"Could not start print job on {printer_name}.")
+                raise SpoolerError(f"Kh\u00f4ng th\u1ec3 t\u1ea1o job in tr\u00ean {printer_name}.")
             document_started = True
 
             for page in zpl_pages:
@@ -42,32 +48,57 @@ class PrintSpoolerService(QObject):
         except SpoolerError:
             raise
         except Exception as exc:
-            raise SpoolerError(f"Could not print to {printer_name}: {exc}") from exc
+            raise SpoolerError(f"Kh\u00f4ng th\u1ec3 in t\u1edbi {printer_name}: {exc}") from exc
         finally:
             if printer_handle is not None:
                 self._close_job(win32print, printer_handle, document_started)
 
     def print_test_document(self, printer_name: str, labels: list[dict[str, str]]) -> None:
         if not printer_name or not printer_name.strip():
-            raise SpoolerError("Printer name is required.")
+            raise SpoolerError("Thi\u1ebfu t\u00ean m\u00e1y in.")
         if not labels:
-            raise SpoolerError("Print data is empty.")
+            raise SpoolerError("D\u1eef li\u1ec7u in \u0111ang tr\u1ed1ng.")
 
         try:
             from PySide6.QtGui import QTextDocument
             from PySide6.QtPrintSupport import QPrinter
         except ImportError as exc:
-            raise SpoolerError("Qt print support is required for standard test printing.") from exc
+            raise SpoolerError("C\u1ea7n Qt print support \u0111\u1ec3 in test th\u00f4ng th\u01b0\u1eddng.") from exc
 
         printer = QPrinter(QPrinter.PrinterMode.HighResolution)
         printer.setPrinterName(printer_name)
         printer.setDocName("iWMS Print Test")
         if not printer.isValid():
-            raise SpoolerError(f"Printer is not available: {printer_name}")
+            raise SpoolerError(f"M\u00e1y in kh\u00f4ng kh\u1ea3 d\u1ee5ng: {printer_name}")
 
         document = QTextDocument()
         document.setHtml(self._build_test_document_html(printer_name, labels))
         document.print_(printer)
+
+    def _printers_from_win32print(self) -> list[str]:
+        try:
+            import win32print
+        except ImportError:
+            return []
+        flags = win32print.PRINTER_ENUM_LOCAL | win32print.PRINTER_ENUM_CONNECTIONS
+        try:
+            return [
+                str(printer[2])
+                for printer in win32print.EnumPrinters(flags)
+                if len(printer) > 2 and printer[2]
+            ]
+        except Exception:
+            return []
+
+    def _printers_from_qt_print_support(self) -> list[str]:
+        try:
+            from PySide6.QtPrintSupport import QPrinterInfo
+        except ImportError:
+            return []
+        try:
+            return [printer.printerName() for printer in QPrinterInfo.availablePrinters()]
+        except Exception:
+            return []
 
     def _write_page(self, win32print: Any, printer_handle: Any, page: str) -> None:
         payload = self._encode_page(page)
@@ -103,11 +134,11 @@ class PrintSpoolerService(QObject):
 
     def _load_win32print(self) -> Any:
         if sys.platform != "win32":
-            raise SpoolerError("Windows Print Spooler is only available on Windows.")
+            raise SpoolerError("Windows Print Spooler ch\u1ec9 kh\u1ea3 d\u1ee5ng tr\u00ean Windows.")
         try:
             import win32print
         except ImportError as exc:
-            raise SpoolerError("pywin32 is required for Windows RAW printing.") from exc
+            raise SpoolerError("C\u1ea7n pywin32 \u0111\u1ec3 in RAW qua Windows.") from exc
         return win32print
 
     def _build_test_document_html(self, printer_name: str, labels: list[dict[str, str]]) -> str:

@@ -1,0 +1,43 @@
+{
+  "require": [
+    "Mold No",
+    "Parts No",
+    "Parts Suffix",
+    "Parts Name",
+    "Qty unit barcode",
+    "Kind of unit",
+    "Qty unit",
+    "Rev His",
+    "Unit Box",
+    "Total Qty",
+    "Production date",
+    "IM Box",
+    "Shift 1",
+    "Shift 2",
+    "Customer 1",
+    "Customer 2",
+    "Customer 3",
+    "Qty box barcode"
+  ],
+  "templateFile": "nidec_label.zpl",
+  "defaults": {
+    "Mold No": "278-D86-00",
+    "Parts No": "RC5-6621",
+    "Parts Suffix": "11A",
+    "Parts Name": "MP Kicker_Guide_Arm",
+    "Qty unit barcode": "*RC5-6621-11A/25000-00-26*",
+    "Kind of unit": "KIT 604",
+    "Qty unit": "250",
+    "Rev His": "05/06",
+    "Unit Box": "4",
+    "Total Qty": "1000",
+    "Production date": "00-00-26",
+    "IM Box": "3",
+    "Shift 1": "1",
+    "Shift 2": "2",
+    "Customer 1": "ASSY",
+    "Customer 2": "IM",
+    "Customer 3": "9020",
+    "Qty box barcode": "*RC5-6621-11A/10000-00-26*"
+  }
+}

@@ -5,12 +5,14 @@ import "pages"
 
 ApplicationWindow {
     id: window
-    width: 980
-    height: 560
-    minimumWidth: 900
-    minimumHeight: 520
+    width: 1024
+    height: 768
+    minimumWidth: 1024
+    minimumHeight: 768
+    maximumWidth: 1024
+    maximumHeight: 768
+    visibility: Window.FullScreen
     visible: true
-    visibility: Window.Maximized
     title: mainViewModel.app_title
     color: "#0d141d"
     font.family: "Roboto"

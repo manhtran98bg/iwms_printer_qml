@@ -1,6 +1,5 @@
-APP_NAME = "RostekIwmPrinter"
-APP_TITLE = "iWMS Auto Print"
+APP_NAME = "DFPrinter"
+APP_TITLE = "Nidec DFPrinter"
 DEFAULT_API_URL = "http://localhost:5000/print/"
-DEFAULT_STAMP_COLUMNS = 2
 CONFIG_FILENAME = "config.json"
-USER_CONFIG_DIRNAME = ".iwms_printer"
+USER_CONFIG_DIRNAME = ".dfprinter"
