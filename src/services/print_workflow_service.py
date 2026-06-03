@@ -87,6 +87,7 @@ class PrintWorkflowService(QObject):
             self._validate_request(request)
             rendered_pages = self._render_pages(config, request)
             output_path = self._write_test_output(rendered_pages)
+            self._printer_service.print_raw(config.printer_name, rendered_pages)
         except Exception as exc:
             self.print_failed.emit(str(exc))
             return
@@ -94,7 +95,8 @@ class PrintWorkflowService(QObject):
             {
                 "label_count": len(request.labels),
                 "page_count": len(rendered_pages),
-                "print_mode": "txt",
+                "printer_name": config.printer_name,
+                "print_mode": "raw",
                 "output_path": str(output_path),
             }
         )
@@ -127,6 +129,8 @@ class PrintWorkflowService(QObject):
             raise PrintRequestError("Ch\u01b0a ch\u1ecdn file template.")
 
     def _validate_test_config(self, config: object) -> None:
+        if not getattr(config, "printer_name", ""):
+            raise PrintRequestError("Ch\u01b0a ch\u1ecdn m\u00e1y in.")
         if not getattr(config, "template_path", ""):
             raise PrintRequestError("Ch\u01b0a ch\u1ecdn file template.")
 

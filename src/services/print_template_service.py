@@ -5,6 +5,7 @@ import json
 from json import JSONDecodeError
 from pathlib import Path
 import re
+import string
 from typing import Any
 
 from PySide6.QtCore import QObject
@@ -48,6 +49,9 @@ class PrintTemplateService(QObject):
 
     def discover_fields(self, template_text: str) -> list[str]:
         fields = {match.group(1) for match in self._placeholder_pattern.finditer(template_text)}
+        if any(field.startswith("Customer ") for field in fields):
+            fields.add("Customer")
+        fields.update(self._to_snake_case(field) for field in list(fields))
         return sorted(fields)
 
     def discover_column_count(self, template_text: str) -> int:
@@ -134,12 +138,14 @@ class PrintTemplateService(QObject):
         row_labels: list[dict[str, str]],
         columns: int,
     ) -> str:
+        normalized_labels = [self._expand_label_fields(label) for label in row_labels]
+
         def replace_placeholder(match: re.Match[str]) -> str:
             field_name = match.group(1)
             column_index = int(match.group(2))
-            if column_index >= columns or column_index >= len(row_labels):
+            if column_index >= columns or column_index >= len(normalized_labels):
                 return ""
-            value = row_labels[column_index].get(field_name, "")
+            value = normalized_labels[column_index].get(field_name, "")
             return "" if value is None else str(value)
 
         rendered_text = template_text.replace(
@@ -147,3 +153,66 @@ class PrintTemplateService(QObject):
             datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
         )
         return self._placeholder_pattern.sub(replace_placeholder, rendered_text)
+
+    def _expand_label_fields(self, label: dict[str, str]) -> dict[str, str]:
+        expanded = dict(label)
+        self._expand_snake_case_aliases(expanded)
+        self._expand_parts_no(expanded)
+        self._expand_customer(expanded)
+        return expanded
+
+    def _expand_snake_case_aliases(self, label: dict[str, str]) -> None:
+        for key, value in list(label.items()):
+            snake_key = self._to_snake_case(str(key))
+            if snake_key:
+                label.setdefault(snake_key, value)
+        aliases = {
+            "mold_no": "Mold No",
+            "parts_no": "Parts No",
+            "parts_name": "Parts Name",
+            "qty_unit_barcode": "Qty unit barcode",
+            "kind_of_unit": "Kind of unit",
+            "qty_unit": "Qty unit",
+            "rev_his": "Rev His",
+            "unit_box": "Unit Box",
+            "total_qty": "Total Qty",
+            "production_date": "Production date",
+            "im_box": "IM Box",
+            "shift": "Shift",
+            "customer": "Customer",
+            "qty_box_barcode": "Qty box barcode",
+            "parts_suffix": "Parts Suffix",
+            "customer_1": "Customer 1",
+            "customer_2": "Customer 2",
+            "customer_3": "Customer 3",
+        }
+        for snake_key, placeholder_key in aliases.items():
+            if snake_key in label:
+                label.setdefault(placeholder_key, label[snake_key])
+
+    def _expand_parts_no(self, label: dict[str, str]) -> None:
+        raw_parts_no = str(label.get("Parts No", "")).strip()
+        if not raw_parts_no or label.get("Parts Suffix"):
+            return
+        parts = [part for part in raw_parts_no.split("-") if part]
+        if len(parts) < 3:
+            return
+        label["Parts No"] = "-".join(parts[:-1])
+        label["Parts Suffix"] = parts[-1]
+
+    def _expand_customer(self, label: dict[str, str]) -> None:
+        raw_customer = str(label.get("Customer", "")).strip()
+        if not raw_customer:
+            return
+        parts = [
+            value.strip(string.whitespace + "-")
+            for value in raw_customer.split("-")
+            if value.strip(string.whitespace + "-")
+        ]
+        for index, value in enumerate(parts, start=1):
+            label.setdefault(f"Customer {index}", value)
+
+    def _to_snake_case(self, value: str) -> str:
+        normalized = re.sub(r"[^A-Za-z0-9]+", "_", value.strip())
+        normalized = re.sub(r"_+", "_", normalized).strip("_")
+        return normalized.lower()

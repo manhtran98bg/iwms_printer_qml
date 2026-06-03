@@ -68,7 +68,7 @@ Item {
                 }
 
                 CustomButton {
-                    text: "Xu\u1ea5t ZPL th\u1eed"
+                    text: "In th\u1eed"
                     iconSize: 30
                     iconSource: "qrc:/icon_print"
                     onClicked: root.viewModel.print_test()

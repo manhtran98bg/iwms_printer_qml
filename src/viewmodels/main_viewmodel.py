@@ -242,13 +242,12 @@ class MainViewModel(BaseViewModel):
     def _on_print_finished(self, payload: object) -> None:
         if isinstance(payload, dict):
             output_path = payload.get("output_path")
-            if output_path:
-                self.set_status(f"\u0110\u00e3 xu\u1ea5t ZPL th\u1eed: {output_path}")
-                return
             self.set_status(
                 "\u0110\u00e3 in xong: "
                 f"{payload.get('label_count', 0)} tem, "
-                f"{payload.get('page_count', 0)} trang."
+                f"{payload.get('page_count', 0)} trang, "
+                f"m\u00e1y in {payload.get('printer_name', '-')}."
+                + (f" File ZPL: {output_path}" if output_path else "")
             )
             return
         self.set_status("\u0110\u00e3 in xong.")
