@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from html import escape
+import subprocess
 import sys
 from typing import Any
 
@@ -11,7 +12,7 @@ from src.core.errors import SpoolerError
 
 
 class PrinterService(QObject):
-    """Lists available printers and sends print jobs to Windows printers."""
+    """Lists available printers and sends RAW label jobs to the OS print backend."""
 
     def __init__(self, encoding: str = "utf-8") -> None:
         super().__init__()
@@ -28,6 +29,15 @@ class PrinterService(QObject):
             raise SpoolerError("Thi\u1ebfu t\u00ean m\u00e1y in.")
         if not zpl_pages:
             raise SpoolerError("D\u1eef li\u1ec7u in \u0111ang tr\u1ed1ng.")
+        if sys.platform == "win32":
+            self._print_raw_windows(printer_name, zpl_pages)
+            return
+        if sys.platform.startswith("linux"):
+            self._print_raw_cups(printer_name, zpl_pages)
+            return
+        raise SpoolerError(f"Ch\u01b0a h\u1ed7 tr\u1ee3 in RAW tr\u00ean h\u1ec7 \u0111i\u1ec1u h\u00e0nh: {sys.platform}")
+
+    def _print_raw_windows(self, printer_name: str, zpl_pages: list[str]) -> None:
         win32print = self._load_win32print()
 
         printer_handle: Any | None = None
@@ -52,6 +62,42 @@ class PrinterService(QObject):
         finally:
             if printer_handle is not None:
                 self._close_job(win32print, printer_handle, document_started)
+
+    def _print_raw_cups(self, printer_name: str, zpl_pages: list[str]) -> None:
+        payload = self._encode_pages(zpl_pages)
+        if not payload:
+            raise SpoolerError("D\u1eef li\u1ec7u in \u0111ang tr\u1ed1ng.")
+
+        command = [
+            "lp",
+            "-d",
+            printer_name,
+            "-o",
+            "raw",
+            "-t",
+            "Zebra Label",
+            "-",
+        ]
+        try:
+            result = subprocess.run(
+                command,
+                input=payload,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+            )
+        except FileNotFoundError as exc:
+            raise SpoolerError("Kh\u00f4ng t\u00ecm th\u1ea5y l\u1ec7nh lp. C\u1ea7n c\u00e0i CUPS \u0111\u1ec3 in tr\u00ean Ubuntu.") from exc
+        except OSError as exc:
+            raise SpoolerError(f"Kh\u00f4ng th\u1ec3 g\u1eedi l\u1ec7nh in qua CUPS: {exc}") from exc
+
+        if result.returncode != 0:
+            message = result.stderr.decode(self._encoding, errors="replace").strip()
+            if not message:
+                message = result.stdout.decode(self._encoding, errors="replace").strip()
+            raise SpoolerError(
+                f"Kh\u00f4ng th\u1ec3 in RAW qua CUPS t\u1edbi {printer_name}: {message or result.returncode}"
+            )
 
     def print_test_document(self, printer_name: str, labels: list[dict[str, str]]) -> None:
         if not printer_name or not printer_name.strip():
@@ -124,6 +170,9 @@ class PrinterService(QObject):
         if page is None:
             return b""
         return str(page).encode(self._encoding)
+
+    def _encode_pages(self, pages: list[str]) -> bytes:
+        return b"".join(self._encode_page(page) for page in pages)
 
     def _close_job(self, win32print: Any, printer_handle: Any, document_started: bool) -> None:
         try:
