@@ -3,11 +3,13 @@ from __future__ import annotations
 import json
 from json import JSONDecodeError
 from pathlib import Path
+import shutil
 from typing import Any
 
 from PySide6.QtCore import QObject
 
-from src.core.runtime_paths import CONFIG_PATH
+from src.core.constants import DEFAULT_SCHEMA_FILENAME, DEFAULT_TEMPLATE_FILENAME
+from src.core.runtime_paths import ASSETS_TEMPLATE_ROOT, CONFIG_PATH, DEFAULT_TEMPLATE_DIR
 from src.models.printer_config import PrinterConfig
 
 
@@ -23,8 +25,9 @@ class SettingsRepositoryService(QObject):
         return self._config_path
 
     def load(self) -> PrinterConfig:
+        self._ensure_default_template_files()
         if not self._config_path.exists():
-            config = PrinterConfig()
+            config = self._default_config()
             self.save(config)
             return config
         try:
@@ -54,3 +57,27 @@ class SettingsRepositoryService(QObject):
             printer_name=str(config.printer_name or ""),
             required_fields=list(config.required_fields or []),
         )
+
+    def _default_config(self) -> PrinterConfig:
+        schema_path = DEFAULT_TEMPLATE_DIR / DEFAULT_SCHEMA_FILENAME
+        template_path = DEFAULT_TEMPLATE_DIR / DEFAULT_TEMPLATE_FILENAME
+        return PrinterConfig(
+            data_path=str(schema_path),
+            template_path=str(template_path),
+        )
+
+    def _ensure_default_template_files(self) -> None:
+        DEFAULT_TEMPLATE_DIR.mkdir(parents=True, exist_ok=True)
+        self._copy_default_file(
+            source=ASSETS_TEMPLATE_ROOT / DEFAULT_SCHEMA_FILENAME,
+            destination=DEFAULT_TEMPLATE_DIR / DEFAULT_SCHEMA_FILENAME,
+        )
+        self._copy_default_file(
+            source=ASSETS_TEMPLATE_ROOT / DEFAULT_TEMPLATE_FILENAME,
+            destination=DEFAULT_TEMPLATE_DIR / DEFAULT_TEMPLATE_FILENAME,
+        )
+
+    def _copy_default_file(self, source: Path, destination: Path) -> None:
+        if destination.exists():
+            return
+        shutil.copyfile(source, destination)

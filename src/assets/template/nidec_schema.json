@@ -15,7 +15,7 @@
     "customer",
     "qty_box_barcode"
   ],
-  "templateFile": "nidec_label_template.zpl",
+  "templateFile": "nidec_template.zpl",
   "defaults": {
     "mold_no": "278-D86-00",
     "parts_no": "RC5-6621-11A",

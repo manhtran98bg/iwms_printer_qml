@@ -17,6 +17,7 @@ Item {
     FileDialog {
         id: schemaDialog
         title: "Ch\u1ecdn file schema JSON"
+        currentFolder: root.viewModel.template_folder_url
         nameFilters: ["JSON files (*.json)", "All files (*)"]
         onAccepted: root.viewModel.set_data_path(String(selectedFile))
     }

@@ -8,6 +8,7 @@ from urllib.parse import unquote, urlparse
 from PySide6.QtCore import Property, Signal, Slot
 
 from src.core.constants import APP_TITLE
+from src.core.runtime_paths import DEFAULT_TEMPLATE_DIR
 from src.models.printer_config import PrinterConfig
 from src.models.print_request import PrintRequest
 from src.services.printer_service import PrinterService
@@ -88,6 +89,10 @@ class MainViewModel(BaseViewModel):
     @Property(str, notify=configChanged)
     def data_path(self) -> str:
         return self._config.data_path
+
+    @Property(str, constant=True)
+    def template_folder_url(self) -> str:
+        return DEFAULT_TEMPLATE_DIR.as_uri()
 
     @Property(str, notify=configChanged)
     def printer_name(self) -> str:
