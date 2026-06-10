@@ -26,6 +26,7 @@ class MainViewModel(BaseViewModel):
     printersChanged = Signal()
     requestStatsChanged = Signal()
     testDataChanged = Signal()
+    templatePreviewChanged = Signal()
 
     def __init__(
         self,
@@ -53,6 +54,7 @@ class MainViewModel(BaseViewModel):
         self._default_values: dict[str, str] = {}
         self._test_rows: list[dict[str, str]] = []
         self._raw_zpl_preview = ""
+        self._template_preview_path = ""
 
         self._server_handler_service.started.connect(self._on_api_started)
         self._server_handler_service.stopped.connect(self._on_api_stopped)
@@ -93,6 +95,25 @@ class MainViewModel(BaseViewModel):
     @Property(str, constant=True)
     def template_folder_url(self) -> str:
         return DEFAULT_TEMPLATE_DIR.as_uri()
+
+    @Property(str, notify=configChanged)
+    def schema_folder_url(self) -> str:
+        data_path = Path(self._config.data_path) if self._config.data_path else None
+        if data_path is not None and data_path.is_file():
+            return data_path.parent.as_uri()
+        return DEFAULT_TEMPLATE_DIR.as_uri()
+
+    @Property(str, notify=templatePreviewChanged)
+    def template_preview_url(self) -> str:
+        preview_path = Path(self._template_preview_path) if self._template_preview_path else None
+        if preview_path is None or not preview_path.is_file():
+            return ""
+        return preview_path.as_uri()
+
+    @Property(bool, notify=templatePreviewChanged)
+    def template_preview_available(self) -> bool:
+        preview_path = Path(self._template_preview_path) if self._template_preview_path else None
+        return preview_path is not None and preview_path.is_file()
 
     @Property(str, notify=configChanged)
     def printer_name(self) -> str:
@@ -281,11 +302,13 @@ class MainViewModel(BaseViewModel):
                 print_format.template_path
             )
         except Exception as exc:
+            self._set_template_preview_path("")
             self.set_status(f"Kh\u00f4ng th\u1ec3 t\u1ea3i schema: {exc}")
             return
 
         self._required_fields = print_format.required_fields
         self._default_values = dict(print_format.default_values or {})
+        self._set_template_preview_path(print_format.preview_path)
         self._test_rows = self._build_required_test_rows(reset_rows=reset_rows)
         self._update_config(
             data_path=data_path,
@@ -304,6 +327,12 @@ class MainViewModel(BaseViewModel):
             )
             return
         self.set_status(f"\u0110\u00e3 t\u1ea3i schema: {len(self._required_fields)} tr\u01b0\u1eddng.")
+
+    def _set_template_preview_path(self, preview_path: str) -> None:
+        if preview_path == self._template_preview_path:
+            return
+        self._template_preview_path = preview_path
+        self.templatePreviewChanged.emit()
 
     def _clean_file_url(self, value: str) -> str:
         if not value:

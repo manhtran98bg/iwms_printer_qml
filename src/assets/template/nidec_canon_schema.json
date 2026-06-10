@@ -1,0 +1,30 @@
+{
+  "require": [
+    "mold_no",
+    "parts_no",
+    "parts_name",
+    "kind_of_unit",
+    "rev_his",
+    "production_date",
+    "im_box",
+    "shift",
+    "customer",
+    "total_qty",
+    "qty_box_barcode"
+  ],
+  "templateFile": "nidec_canon_template.zpl",
+  "previewFile": "nidec_canon_template_preview.png",
+  "defaults": {
+    "mold_no": "278-G13-00",
+    "parts_no": "RC4-3605",
+    "parts_name": "shutter_cam",
+    "kind_of_unit": "B9",
+    "rev_his": "008/008",
+    "production_date": "09-06-26",
+    "im_box": "1",
+    "shift": "2",
+    "customer": "CANON QV",
+    "total_qty": "4000",
+    "qty_box_barcode": "*RC4-3605/1600-00-26*"
+  }
+}

@@ -8,7 +8,11 @@ from typing import Any
 
 from PySide6.QtCore import QObject
 
-from src.core.constants import DEFAULT_SCHEMA_FILENAME, DEFAULT_TEMPLATE_FILENAME
+from src.core.constants import (
+    DEFAULT_SCHEMA_FILENAME,
+    DEFAULT_TEMPLATE_FILENAME,
+    DEFAULT_TEMPLATE_PREVIEW_FILENAME,
+)
 from src.core.runtime_paths import ASSETS_TEMPLATE_ROOT, CONFIG_PATH, DEFAULT_TEMPLATE_DIR
 from src.models.printer_config import PrinterConfig
 
@@ -75,6 +79,10 @@ class SettingsRepositoryService(QObject):
         self._copy_default_file(
             source=ASSETS_TEMPLATE_ROOT / DEFAULT_TEMPLATE_FILENAME,
             destination=DEFAULT_TEMPLATE_DIR / DEFAULT_TEMPLATE_FILENAME,
+        )
+        self._copy_default_file(
+            source=ASSETS_TEMPLATE_ROOT / DEFAULT_TEMPLATE_PREVIEW_FILENAME,
+            destination=DEFAULT_TEMPLATE_DIR / DEFAULT_TEMPLATE_PREVIEW_FILENAME,
         )
 
     def _copy_default_file(self, source: Path, destination: Path) -> None:

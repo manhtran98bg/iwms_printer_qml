@@ -19,6 +19,7 @@ class PrintTemplateService(QObject):
 
     CURRENT_DATETIME_TOKEN = "{{current_datetime}}"
     _template_keys = ("template", "templatePath", "templateFile")
+    _preview_keys = ("preview", "previewPath", "previewFile", "image", "imagePath", "imageFile")
     _placeholder_pattern = re.compile(r"(?<=\^FD)(.+?)_(\d+)(?=\^FS)")
 
     def load_format(self, path: str) -> PrintFormat:
@@ -34,10 +35,12 @@ class PrintTemplateService(QObject):
 
         required_fields = self._required_fields(payload)
         template_path = self._template_path(payload, format_path.parent)
+        preview_path = self._optional_path(payload, format_path.parent, self._preview_keys)
         default_values = self._default_values(payload, required_fields)
         return PrintFormat(
             required_fields=required_fields,
             template_path=template_path,
+            preview_path=preview_path,
             default_values=default_values,
         )
 
@@ -111,6 +114,26 @@ class PrintTemplateService(QObject):
         if not template_path.is_absolute():
             template_path = base_dir / template_path
         return str(template_path.resolve())
+
+    def _optional_path(
+        self,
+        payload: dict[str, Any],
+        base_dir: Path,
+        keys: tuple[str, ...],
+    ) -> str:
+        raw_path = ""
+        for key in keys:
+            value = payload.get(key)
+            if value:
+                raw_path = str(value).strip()
+                break
+        if not raw_path:
+            return ""
+
+        path = Path(raw_path)
+        if not path.is_absolute():
+            path = base_dir / path
+        return str(path.resolve())
 
     def _default_values(
         self,

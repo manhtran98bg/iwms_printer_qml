@@ -5,13 +5,12 @@ import "pages"
 
 ApplicationWindow {
     id: window
-    width: 1024
-    height: 768
-    minimumWidth: 1024
-    minimumHeight: 768
-    maximumWidth: 1024
-    maximumHeight: 768
-    visibility: Window.FullScreen
+    width: Screen.width 
+    height: Screen.height
+    minimumWidth: 1200
+    minimumHeight: 800
+    visibility: Window.Maximized
+    flags: Qt.Window | Qt.WindowCloseButtonHint | Qt.WindowMinimizeButtonHint | Qt.WindowTitleHint
     visible: true
     title: mainViewModel.app_title
     color: "#0d141d"

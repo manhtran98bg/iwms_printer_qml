@@ -17,7 +17,7 @@ Item {
     FileDialog {
         id: schemaDialog
         title: "Ch\u1ecdn file schema JSON"
-        currentFolder: root.viewModel.template_folder_url
+        currentFolder: root.viewModel.schema_folder_url
         nameFilters: ["JSON files (*.json)", "All files (*)"]
         onAccepted: root.viewModel.set_data_path(String(selectedFile))
     }
@@ -260,14 +260,66 @@ Item {
                         Layout.preferredWidth: 96
                         text: "Ch\u1ecdn"
                         iconSource: "qrc:/icon_browse"
-                        onClicked: schemaDialog.open()
+                        onClicked: {
+                            schemaDialog.currentFolder = root.viewModel.schema_folder_url
+                            schemaDialog.open()
+                        }
                     }
                 }
             }
         }
 
-        Item {
+        Rectangle {
+            Layout.fillWidth: true
             Layout.fillHeight: true
+            Layout.minimumHeight: 280
+            color: root.panelColor
+            radius: 12
+            border.color: root.borderColor
+            clip: true
+
+            ColumnLayout {
+                anchors.fill: parent
+                anchors.margins: 16
+                spacing: 12
+
+                Label {
+                    text: "Ảnh template tem"
+                    color: root.textColor
+                    font.pixelSize: 18
+                    font.bold: true
+                }
+
+                Item {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    Layout.minimumHeight: 280
+
+                    Image {
+                        anchors.fill: parent
+                        source: root.viewModel.template_preview_url
+                        visible: root.viewModel.template_preview_available
+                        fillMode: Image.PreserveAspectFit
+                        asynchronous: true
+                    }
+
+                    Rectangle {
+                        anchors.fill: parent
+                        visible: !root.viewModel.template_preview_available
+                        color: "#0f1722"
+                        border.color: root.borderColor
+                        radius: 6
+
+                        Label {
+                            anchors.centerIn: parent
+                            text: "Không tồn tại"
+                            color: root.mutedTextColor
+                            font.pixelSize: 18
+                            font.bold: true
+                        }
+                    }
+                }
+            }
         }
     }
 }
