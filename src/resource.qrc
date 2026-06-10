@@ -24,5 +24,6 @@
         <file>assets/font/Roboto-SemiBoldItalic.ttf</file>
         <file>assets/font/Roboto-Thin.ttf</file>
         <file>assets/font/Roboto-ThinItalic.ttf</file>
+        <file alias="logo">assets/icon/logo.svg</file>
     </qresource>
 </RCC>

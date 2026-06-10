@@ -15,7 +15,6 @@ ApplicationWindow {
     title: mainViewModel.app_title
     color: "#0d141d"
     font.family: "Roboto"
-
     PrinterPage {
         anchors.fill: parent
         viewModel: mainViewModel

@@ -98,7 +98,7 @@ Item {
             implicitHeight: 62
             Layout.leftMargin: 20
             Layout.rightMargin: 20
-
+            radius: 12
             color: root.panelColor
             border.color: root.borderColor
 
