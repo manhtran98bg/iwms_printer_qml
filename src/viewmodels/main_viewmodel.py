@@ -27,6 +27,7 @@ class MainViewModel(BaseViewModel):
     requestStatsChanged = Signal()
     testDataChanged = Signal()
     templatePreviewChanged = Signal()
+    printSettingsChanged = Signal()
 
     def __init__(
         self,
@@ -55,6 +56,8 @@ class MainViewModel(BaseViewModel):
         self._test_rows: list[dict[str, str]] = []
         self._raw_zpl_preview = ""
         self._template_preview_path = ""
+        self._margin_left = 0
+        self._margin_top = 0
 
         self._server_handler_service.started.connect(self._on_api_started)
         self._server_handler_service.stopped.connect(self._on_api_stopped)
@@ -114,6 +117,14 @@ class MainViewModel(BaseViewModel):
     def template_preview_available(self) -> bool:
         preview_path = Path(self._template_preview_path) if self._template_preview_path else None
         return preview_path is not None and preview_path.is_file()
+
+    @Property(int, notify=printSettingsChanged)
+    def margin_left(self) -> int:
+        return self._margin_left
+
+    @Property(int, notify=printSettingsChanged)
+    def margin_top(self) -> int:
+        return self._margin_top
 
     @Property(str, notify=configChanged)
     def printer_name(self) -> str:
@@ -198,6 +209,14 @@ class MainViewModel(BaseViewModel):
     @Slot(str)
     def set_printer_name(self, printer_name: str) -> None:
         self._update_config(printer_name=printer_name)
+
+    @Slot(int)
+    def set_margin_left(self, margin_left: int) -> None:
+        self._save_print_settings(margin_left, self._margin_top)
+
+    @Slot(int)
+    def set_margin_top(self, margin_top: int) -> None:
+        self._save_print_settings(self._margin_left, margin_top)
 
     @Slot()
     def print_test(self) -> None:
@@ -309,6 +328,7 @@ class MainViewModel(BaseViewModel):
         self._required_fields = print_format.required_fields
         self._default_values = dict(print_format.default_values or {})
         self._set_template_preview_path(print_format.preview_path)
+        self._set_print_settings(print_format.margin_left, print_format.margin_top)
         self._test_rows = self._build_required_test_rows(reset_rows=reset_rows)
         self._update_config(
             data_path=data_path,
@@ -333,6 +353,30 @@ class MainViewModel(BaseViewModel):
             return
         self._template_preview_path = preview_path
         self.templatePreviewChanged.emit()
+
+    def _set_print_settings(self, margin_left: int, margin_top: int) -> None:
+        if margin_left == self._margin_left and margin_top == self._margin_top:
+            return
+        self._margin_left = margin_left
+        self._margin_top = margin_top
+        self.printSettingsChanged.emit()
+
+    def _save_print_settings(self, margin_left: int, margin_top: int) -> None:
+        if not self._config.data_path:
+            self.set_status("Ch\u01b0a ch\u1ecdn file schema.")
+            return
+        try:
+            self._print_template_service.save_print_settings(
+                self._config.data_path,
+                margin_left,
+                margin_top,
+            )
+        except Exception as exc:
+            self.set_status(f"Kh\u00f4ng th\u1ec3 l\u01b0u margin: {exc}")
+            return
+        self._set_print_settings(margin_left, margin_top)
+        self._refresh_raw_zpl_preview()
+        self.set_status(f"\u0110\u00e3 l\u01b0u margin: left {margin_left}, top {margin_top} dot.")
 
     def _clean_file_url(self, value: str) -> str:
         if not value:

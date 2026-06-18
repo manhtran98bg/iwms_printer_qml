@@ -266,6 +266,70 @@ Item {
                         }
                     }
                 }
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 12
+
+                    Label {
+                        Layout.preferredWidth: 110
+                        text: "Margin tr\u00e1i"
+                        color: root.textColor
+                        font.pixelSize: 13
+                    }
+
+                    SpinBox {
+                        Layout.preferredWidth: 140
+                        from: -20
+                        to: 20
+                        stepSize: 1
+                        editable: true
+                        value: root.viewModel.margin_left
+                        onValueModified: root.viewModel.set_margin_left(value)
+                    }
+
+                    Label {
+                        text: "dot"
+                        color: root.mutedTextColor
+                        font.pixelSize: 13
+                    }
+
+                    Item {
+                        Layout.fillWidth: true
+                    }
+                }
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 12
+
+                    Label {
+                        Layout.preferredWidth: 110
+                        text: "Margin tr\u00ean"
+                        color: root.textColor
+                        font.pixelSize: 13
+                    }
+
+                    SpinBox {
+                        Layout.preferredWidth: 140
+                        from: -20
+                        to: 20
+                        stepSize: 1
+                        editable: true
+                        value: root.viewModel.margin_top
+                        onValueModified: root.viewModel.set_margin_top(value)
+                    }
+
+                    Label {
+                        text: "dot"
+                        color: root.mutedTextColor
+                        font.pixelSize: 13
+                    }
+
+                    Item {
+                        Layout.fillWidth: true
+                    }
+                }
             }
         }
 

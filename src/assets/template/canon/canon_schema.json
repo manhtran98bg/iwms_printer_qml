@@ -1,0 +1,34 @@
+{
+  "require": [
+    "qty_box_barcode",
+    "customer",
+    "im_box",
+    "parts_no",
+    "parts_name",
+    "kind_of_unit",
+    "rev_his",
+    "master_data.die_no",
+    "shift",
+    "production_date",
+    "total_qty"
+  ],
+  "templateFile": "canon_zpl_place_holder.zpl",
+  "previewFile": "canon_preview.jpg",
+  "printSettings": {
+    "margin_left": 10,
+    "margin_top": -10
+  },
+  "defaults": {
+    "qty_box_barcode": "*RU1-0404/144-00-26*",
+    "customer": "CANON QV",
+    "im_box": "1",
+    "parts_no": "RU1-0404",
+    "parts_name": "W-Kakeha_Gear",
+    "kind_of_unit": "B9",
+    "rev_his": "008/009",
+    "master_data.die_no": "14A",
+    "shift": "1",
+    "production_date": "12-06-26",
+    "total_qty": "360"
+  }
+}

@@ -105,12 +105,15 @@ class PrintWorkflowService(QObject):
         config = self._settings_repository.load()
         if not getattr(config, "template_path", ""):
             return ""
-        template_text = self._print_template_service.load_template(config.template_path)
+        template_path, margin_left, margin_top = self._render_settings(config)
+        template_text = self._print_template_service.load_template(template_path)
         columns = self._print_template_service.discover_column_count(template_text)
         rendered_pages = self._print_template_service.render(
             template_text,
             request.labels,
             columns,
+            margin_left,
+            margin_top,
         )
         return "\n".join(rendered_pages)
 
@@ -147,13 +150,26 @@ class PrintWorkflowService(QObject):
         return rendered_pages
 
     def _render_pages(self, config: PrinterConfig, request: PrintRequest) -> list[str]:
-        template_text = self._print_template_service.load_template(config.template_path)
+        template_path, margin_left, margin_top = self._render_settings(config)
+        template_text = self._print_template_service.load_template(template_path)
         columns = self._print_template_service.discover_column_count(template_text)
         return self._print_template_service.render(
             template_text,
             request.labels,
             columns,
+            margin_left,
+            margin_top,
         )
+
+    def _render_settings(self, config: PrinterConfig) -> tuple[str, int, int]:
+        if config.data_path:
+            print_format = self._print_template_service.load_format(config.data_path)
+            return (
+                print_format.template_path,
+                print_format.margin_left,
+                print_format.margin_top,
+            )
+        return config.template_path, 0, 0
 
     def _write_test_output(self, rendered_pages: list[str]):
         output_dir = APP_ENVIRONMENT_ROOT / "test_output"

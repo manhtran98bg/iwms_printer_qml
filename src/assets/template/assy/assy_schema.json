@@ -1,0 +1,40 @@
+{
+  "require": [
+    "mold_no",
+    "parts_no",
+    "parts_name",
+    "qty_unit_barcode",
+    "master_data.packing_kit",
+    "qty_unit",
+    "rev_his",
+    "unit_box",
+    "total_qty",
+    "production_date",
+    "im_box",
+    "shift",
+    "customer",
+    "qty_box_barcode"
+  ],
+  "templateFile": "assy_zpl_place_holder.zpl",
+  "previewFile": "assy_preview.jpg",
+  "printSettings": {
+    "margin_left": 0,
+    "margin_top": 0
+  },
+  "defaults": {
+    "mold_no": "278-H21-00",
+    "parts_no": "RU1-0404",
+    "parts_name": "W-Kakeha_Gear",
+    "qty_unit_barcode": "*RU1-0404/360-00-26*",
+    "master_data.packing_kit": "KIT604",
+    "qty_unit": "360",
+    "rev_his": "008/009",
+    "unit_box": "1",
+    "total_qty": "360",
+    "production_date": "12-06-26",
+    "im_box": "1",
+    "shift": "1",
+    "customer": "ASSY",
+    "qty_box_barcode": "*RU1-0404/144-00-26*"
+  }
+}

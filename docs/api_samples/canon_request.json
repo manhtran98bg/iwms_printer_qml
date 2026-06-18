@@ -1,0 +1,39 @@
+[
+  {
+    "mold_no": "278-H21-00",
+    "parts_no": "RU1-0404",
+    "parts_name": "W-Kakeha_Gear",
+    "qty_unit_barcode": "*RU1-0404/360-00-26*",
+    "kind_of_unit": "B9",
+    "qty_unit": "360",
+    "rev_his": "008/009",
+    "unit_box": "1",
+    "total_qty": "360",
+    "production_date": "12-06-26",
+    "im_box": "1",
+    "shift": "1",
+    "customer": "CANON QV",
+    "qty_box_barcode": "*RU1-0404/144-00-26*",
+    "master_data": {
+      "_id": "6a0eca3d5f9b2c39d002ccee",
+      "part_no": "RU1-0404",
+      "material_code": "M243Z1136A",
+      "mold_no": "278-H21-00",
+      "product_name": "W-Kakeha_Gear",
+      "cav_mold": 4,
+      "cav_run": 4,
+      "ct": 22.1,
+      "customer": "CANON QV",
+      "die_no": "14A",
+      "material": "POM",
+      "model": "L1170, L1199",
+      "packing_box": "B9",
+      "packing_kit": "KIT604",
+      "packing_kit_per_box": 4,
+      "packing_pcs_per_box": 360,
+      "rev_his": "008/009",
+      "updatedAt": "2026-05-21T09:10:38.293Z"
+    },
+    "label": 1
+  }
+]

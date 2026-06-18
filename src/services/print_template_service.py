@@ -18,6 +18,10 @@ class PrintTemplateService(QObject):
     """Loads print format JSON, reads ZPL templates, and renders placeholders."""
 
     CURRENT_DATETIME_TOKEN = "{{current_datetime}}"
+    MARGIN_LEFT_TOKEN = "{{margin_left}}"
+    MARGIN_TOP_TOKEN = "{{margin_top}}"
+    MIN_MARGIN = -20
+    MAX_MARGIN = 20
     _template_keys = ("template", "templatePath", "templateFile")
     _preview_keys = ("preview", "previewPath", "previewFile", "image", "imagePath", "imageFile")
     _placeholder_pattern = re.compile(r"(?<=\^FD)(.+?)_(\d+)(?=\^FS)")
@@ -26,23 +30,36 @@ class PrintTemplateService(QObject):
         format_path = Path(path)
         if not format_path.exists():
             raise TemplateError(f"Format file does not exist: {path}")
-        try:
-            payload = json.loads(format_path.read_text(encoding="utf-8"))
-        except (OSError, JSONDecodeError) as exc:
-            raise TemplateError(f"Kh\u00f4ng th\u1ec3 \u0111\u1ecdc JSON schema: {exc}") from exc
-        if not isinstance(payload, dict):
-            raise TemplateError("JSON schema ph\u1ea3i l\u00e0 object.")
+        payload = self._load_schema_payload(format_path)
 
         required_fields = self._required_fields(payload)
         template_path = self._template_path(payload, format_path.parent)
         preview_path = self._optional_path(payload, format_path.parent, self._preview_keys)
+        margin_left, margin_top = self._print_settings(payload)
         default_values = self._default_values(payload, required_fields)
         return PrintFormat(
             required_fields=required_fields,
             template_path=template_path,
             preview_path=preview_path,
+            margin_left=margin_left,
+            margin_top=margin_top,
             default_values=default_values,
         )
+
+    def save_print_settings(self, path: str, margin_left: int, margin_top: int) -> None:
+        format_path = Path(path)
+        payload = self._load_schema_payload(format_path)
+        payload["printSettings"] = {
+            "margin_left": self._validate_margin(margin_left, "margin_left"),
+            "margin_top": self._validate_margin(margin_top, "margin_top"),
+        }
+        try:
+            format_path.write_text(
+                json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
+                encoding="utf-8",
+            )
+        except OSError as exc:
+            raise TemplateError(f"Kh\u00f4ng th\u1ec3 l\u01b0u printSettings: {exc}") from exc
 
     def load_template(self, path: str) -> str:
         template_path = Path(path)
@@ -66,7 +83,14 @@ class PrintTemplateService(QObject):
             return 1
         return max(indexes) + 1
 
-    def render(self, template_text: str, labels: list[dict[str, str]], columns: int) -> list[str]:
+    def render(
+        self,
+        template_text: str,
+        labels: list[dict[str, Any]],
+        columns: int,
+        margin_left: int = 0,
+        margin_top: int = 0,
+    ) -> list[str]:
         if not template_text:
             raise TemplateError("N\u1ed9i dung template \u0111ang tr\u1ed1ng.")
         if columns < 1:
@@ -76,10 +100,29 @@ class PrintTemplateService(QObject):
 
         pages: list[str] = []
         row_count = (len(labels) + columns - 1) // columns
+        normalized_margin_left = self._validate_margin(margin_left, "margin_left")
+        normalized_margin_top = self._validate_margin(margin_top, "margin_top")
         for row_index in range(row_count):
             row_labels = labels[row_index * columns : (row_index + 1) * columns]
-            pages.append(self._render_page(template_text, row_labels, columns))
+            pages.append(
+                self._render_page(
+                    template_text,
+                    row_labels,
+                    columns,
+                    normalized_margin_left,
+                    normalized_margin_top,
+                )
+            )
         return pages
+
+    def _load_schema_payload(self, format_path: Path) -> dict[str, Any]:
+        try:
+            payload = json.loads(format_path.read_text(encoding="utf-8"))
+        except (OSError, JSONDecodeError) as exc:
+            raise TemplateError(f"Kh\u00f4ng th\u1ec3 \u0111\u1ecdc JSON schema: {exc}") from exc
+        if not isinstance(payload, dict):
+            raise TemplateError("JSON schema ph\u1ea3i l\u00e0 object.")
+        return payload
 
     def _required_fields(self, payload: dict[str, Any]) -> list[str]:
         raw_fields = payload.get("require", payload.get("requiredFields", []))
@@ -135,6 +178,30 @@ class PrintTemplateService(QObject):
             path = base_dir / path
         return str(path.resolve())
 
+    def _print_settings(self, payload: dict[str, Any]) -> tuple[int, int]:
+        raw_settings = payload.get("printSettings", {})
+        if raw_settings is None:
+            raw_settings = {}
+        if not isinstance(raw_settings, dict):
+            raise TemplateError("Key 'printSettings' trong JSON schema ph\u1ea3i l\u00e0 object.")
+        return (
+            self._validate_margin(raw_settings.get("margin_left", 0), "margin_left"),
+            self._validate_margin(raw_settings.get("margin_top", 0), "margin_top"),
+        )
+
+    def _validate_margin(self, value: Any, field_name: str) -> int:
+        if isinstance(value, bool):
+            raise TemplateError(f"{field_name} ph\u1ea3i l\u00e0 s\u1ed1 nguy\u00ean.")
+        try:
+            normalized = int(value)
+        except (TypeError, ValueError) as exc:
+            raise TemplateError(f"{field_name} ph\u1ea3i l\u00e0 s\u1ed1 nguy\u00ean.") from exc
+        if normalized < self.MIN_MARGIN or normalized > self.MAX_MARGIN:
+            raise TemplateError(
+                f"{field_name} ph\u1ea3i trong kho\u1ea3ng {self.MIN_MARGIN}..{self.MAX_MARGIN}."
+            )
+        return normalized
+
     def _default_values(
         self,
         payload: dict[str, Any],
@@ -158,8 +225,10 @@ class PrintTemplateService(QObject):
     def _render_page(
         self,
         template_text: str,
-        row_labels: list[dict[str, str]],
+        row_labels: list[dict[str, Any]],
         columns: int,
+        margin_left: int,
+        margin_top: int,
     ) -> str:
         normalized_labels = [self._expand_label_fields(label) for label in row_labels]
 
@@ -168,23 +237,36 @@ class PrintTemplateService(QObject):
             column_index = int(match.group(2))
             if column_index >= columns or column_index >= len(normalized_labels):
                 return ""
-            value = normalized_labels[column_index].get(field_name, "")
+            value = self._resolve_field_value(normalized_labels[column_index], field_name)
             return "" if value is None else str(value)
 
         rendered_text = template_text.replace(
             self.CURRENT_DATETIME_TOKEN,
             datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
         )
+        rendered_text = rendered_text.replace(self.MARGIN_LEFT_TOKEN, str(margin_left))
+        rendered_text = rendered_text.replace(self.MARGIN_TOP_TOKEN, str(margin_top))
         return self._placeholder_pattern.sub(replace_placeholder, rendered_text)
 
-    def _expand_label_fields(self, label: dict[str, str]) -> dict[str, str]:
+    def _resolve_field_value(self, label: dict[str, Any], field_name: str) -> Any:
+        if field_name in label:
+            return label[field_name]
+
+        value: Any = label
+        for path_part in field_name.split("."):
+            if not isinstance(value, dict) or path_part not in value:
+                return ""
+            value = value[path_part]
+        return value
+
+    def _expand_label_fields(self, label: dict[str, Any]) -> dict[str, Any]:
         expanded = dict(label)
         self._expand_snake_case_aliases(expanded)
         self._expand_parts_no(expanded)
         self._expand_customer(expanded)
         return expanded
 
-    def _expand_snake_case_aliases(self, label: dict[str, str]) -> None:
+    def _expand_snake_case_aliases(self, label: dict[str, Any]) -> None:
         for key, value in list(label.items()):
             snake_key = self._to_snake_case(str(key))
             if snake_key:
@@ -213,7 +295,7 @@ class PrintTemplateService(QObject):
             if snake_key in label:
                 label.setdefault(placeholder_key, label[snake_key])
 
-    def _expand_parts_no(self, label: dict[str, str]) -> None:
+    def _expand_parts_no(self, label: dict[str, Any]) -> None:
         raw_parts_no = str(label.get("Parts No", "")).strip()
         if not raw_parts_no or label.get("Parts Suffix"):
             return
@@ -223,7 +305,7 @@ class PrintTemplateService(QObject):
         label["Parts No"] = "-".join(parts[:-1])
         label["Parts Suffix"] = parts[-1]
 
-    def _expand_customer(self, label: dict[str, str]) -> None:
+    def _expand_customer(self, label: dict[str, Any]) -> None:
         raw_customer = str(label.get("Customer", "")).strip()
         if not raw_customer:
             return

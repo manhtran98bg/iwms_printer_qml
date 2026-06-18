@@ -1,0 +1,42 @@
+[
+  {
+    "mold_no": "278-H21-00",
+    "parts_no": "RU1-0404",
+    "parts_name": "W-Kakeha_Gear",
+    "qty_unit_barcode": "*RU1-0404/360-00-26*",
+    "kind_of_unit": "B9",
+    "qty_unit": "360",
+    "rev_his": "008/009",
+    "unit_box": "1",
+    "total_qty": "360",
+    "production_date": "12-06-26",
+    "im_box": "1",
+    "shift": "1",
+    "customer": "CANON QV",
+    "qty_box_barcode": "*RU1-0404/144-00-26*",
+    "master_data": {
+      "packing_kit": "KIT604"
+    },
+    "label": 1
+  },
+  {
+    "mold_no": "278-G13-00",
+    "parts_no": "RC4-3605",
+    "parts_name": "shutter_cam",
+    "qty_unit_barcode": "*RC4-3605/4000-00-26*",
+    "kind_of_unit": "B9",
+    "qty_unit": "4000",
+    "rev_his": "008/008",
+    "unit_box": "1",
+    "total_qty": "4000",
+    "production_date": "09-06-26",
+    "im_box": "2",
+    "shift": "2",
+    "customer": "CANON QV",
+    "qty_box_barcode": "*RC4-3605/1600-00-26*",
+    "master_data": {
+      "packing_kit": "KIT608"
+    },
+    "label": 2
+  }
+]

@@ -6,7 +6,7 @@ from typing import Any
 from src.models.base_model import BaseModel
 
 
-LabelPayload = dict[str, str]
+LabelPayload = dict[str, Any]
 
 
 @dataclass(frozen=True)

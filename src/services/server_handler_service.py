@@ -153,7 +153,7 @@ class ServerHandlerService(QObject):
             for key, value in label.items():
                 if not isinstance(key, str):
                     raise ValueError(f"Tem t\u1ea1i index {index} c\u00f3 t\u00ean field kh\u00f4ng ph\u1ea3i string.")
-                if value is not None and not isinstance(value, str):
+                if value is not None and not isinstance(value, (str, dict, list)):
                     label[key] = str(value)
         return print_request
 
