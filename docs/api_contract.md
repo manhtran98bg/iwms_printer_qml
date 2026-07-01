@@ -29,15 +29,24 @@ Compatible request body:
   {
     "kit": "LOAI BO",
     "sku": "",
-    "qty": ""
+    "qty": "",
+    "remarks": "Mau_02"
   },
   {
     "kit": "K123456",
     "sku": "12345678",
-    "qty": "4321"
+    "qty": "4321",
+    "remarks": "Mau_01"
   }
 ]
 ```
+
+Template routing is selected per label:
+
+- `remarks = "Mau_02"` prints with the Canon template.
+- `remarks = "Mau_01"` prints with the Assy template.
+
+Missing or unknown `remarks` values are rejected with HTTP `400`.
 
 Success response:
 
@@ -67,7 +76,8 @@ Preferred v2 body:
     {
       "kit": "LOAI BO",
       "sku": "",
-      "qty": ""
+      "qty": "",
+      "remarks": "Mau_02"
     }
   ]
 }

@@ -4,7 +4,7 @@ import logging
 import socket
 import threading
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Callable
 from urllib.parse import urlparse
 
 from PySide6.QtCore import QObject, Signal, Slot
@@ -33,13 +33,23 @@ class ServerHandlerService(QObject):
     request_processed = Signal(str, bool)
     print_request_received = Signal(object)
 
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        request_validator: Callable[[PrintRequest], None] | None = None,
+    ) -> None:
         super().__init__()
         self._running = False
         self._url = ""
         self._server: Any | None = None
         self._thread: threading.Thread | None = None
         self._stop_lock = threading.Lock()
+        self._request_validator = request_validator
+
+    def set_request_validator(
+        self,
+        request_validator: Callable[[PrintRequest], None] | None,
+    ) -> None:
+        self._request_validator = request_validator
 
     @Slot(str)
     def start(self, url: str) -> None:
@@ -109,7 +119,8 @@ class ServerHandlerService(QObject):
             logger.info("API server thread finished")
 
     def _create_app(self, path: str) -> Any:
-        from fastapi import Body, FastAPI
+        from fastapi import Body, FastAPI, Request
+        from fastapi.exceptions import RequestValidationError
         from fastapi.middleware.cors import CORSMiddleware
         from fastapi.responses import JSONResponse, PlainTextResponse, Response
 
@@ -120,6 +131,17 @@ class ServerHandlerService(QObject):
             allow_methods=["POST", "OPTIONS"],
             allow_headers=["Content-Type"],
         )
+
+        @app.exception_handler(RequestValidationError)
+        async def validation_exception_handler(
+            request: Request,
+            exc: RequestValidationError,
+        ) -> JSONResponse:
+            logger.warning("Invalid API request body: %s", exc)
+            self.request_processed.emit("400 Bad Request", False)
+            return self._bad_request_response(
+                "JSON body không đúng format hoặc không parse được.",
+            )
 
         @app.get(path)
         async def health_check() -> PlainTextResponse:
@@ -134,6 +156,7 @@ class ServerHandlerService(QObject):
         async def print_labels(body: Any = Body(...)) -> JSONResponse:
             try:
                 print_request = self._parse_print_request(body)
+                self._validate_print_request(print_request)
                 logger.info(
                     "Print request accepted with %s label(s)",
                     len(print_request.labels),
@@ -156,6 +179,14 @@ class ServerHandlerService(QObject):
 
         return app
 
+    def _bad_request_response(self, message: str) -> Any:
+        from fastapi.responses import JSONResponse
+
+        return JSONResponse(
+            ApiResponse(success=False, message=message).to_dict(),
+            status_code=400,
+        )
+
     def _create_uvicorn_server(self, app: Any, host: str, port: int) -> Any:
         import uvicorn
 
@@ -169,19 +200,32 @@ class ServerHandlerService(QObject):
         return uvicorn.Server(config)
 
     def _parse_print_request(self, body: Any) -> PrintRequest:
-        print_request = PrintRequest.from_compatible_body(body)
-        logger.debug("Parsed print request with %s label(s)", len(print_request.labels))
+        if isinstance(body, list):
+            labels = body
+        elif isinstance(body, dict) and "labels" in body:
+            labels = body.get("labels")
+            if not isinstance(labels, list):
+                raise ValueError("Request field 'labels' phải là array.")
+        else:
+            raise ValueError("Request body phải là array tem hoặc object có field 'labels'.")
+
+        print_request = PrintRequest(labels=labels)
         if not print_request.labels:
-            raise ValueError("Request body ph\u1ea3i c\u00f3 \u00edt nh\u1ea5t m\u1ed9t tem.")
+            raise ValueError("Request body phải có ít nhất một tem.")
         for index, label in enumerate(print_request.labels):
             if not isinstance(label, dict):
-                raise ValueError(f"Tem t\u1ea1i index {index} ph\u1ea3i l\u00e0 object.")
+                raise ValueError(f"Tem tại index {index} phải là object.")
             for key, value in label.items():
                 if not isinstance(key, str):
-                    raise ValueError(f"Tem t\u1ea1i index {index} c\u00f3 t\u00ean field kh\u00f4ng ph\u1ea3i string.")
+                    raise ValueError(f"Tem tại index {index} có tên field không phải string.")
                 if value is not None and not isinstance(value, (str, dict, list)):
                     label[key] = str(value)
+        logger.debug("Parsed print request with %s label(s)", len(print_request.labels))
         return print_request
+
+    def _validate_print_request(self, print_request: PrintRequest) -> None:
+        if self._request_validator is not None:
+            self._request_validator(print_request)
 
     def _parse_endpoint(self, url: str) -> ApiEndpoint:
         normalized_url = (url or "").strip()

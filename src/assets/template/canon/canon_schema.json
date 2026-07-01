@@ -21,9 +21,9 @@
   "routing": {
     "priority": 10,
     "match": {
-      "field": "customer",
-      "regex": "CANON",
-      "flags": "i"
+      "field": "remarks",
+      "regex": "^Mau_02$",
+      "flags": ""
     }
   },
   "printSettings": {

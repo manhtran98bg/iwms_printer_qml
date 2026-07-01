@@ -6,8 +6,11 @@ Default endpoint:
 http://localhost:5000/print/
 ```
 
-The app prints with the schema currently selected in the Settings screen. Select
-`canon_schema.json` or `assy_schema.json` before sending a request.
+The API automatically selects the print template from each label's `remarks`
+field:
+
+- `Mau_02`: Canon template.
+- `Mau_01`: Assy template.
 
 ## Health check
 
@@ -24,8 +27,6 @@ curl "http://localhost:5000/print/"
 ```
 
 ## Print one Canon label
-
-Select `src/assets/template/canon/canon_schema.json` in the app first.
 
 Windows PowerShell:
 
@@ -52,8 +53,6 @@ curl -X POST 'http://localhost:5000/print/' \
 ```
 
 ## Print one Assy label
-
-Select `src/assets/template/assy/assy_schema.json` in the app first.
 
 Windows PowerShell:
 
@@ -114,7 +113,8 @@ The API also accepts this shape:
   "labels": [
     {
       "mold_no": "278-H21-00",
-      "parts_no": "RU1-0404"
+      "parts_no": "RU1-0404",
+      "remarks": "Mau_02"
     }
   ]
 }
@@ -136,9 +136,12 @@ Invalid request:
 ```json
 {
   "success": false,
-  "message": "Request body phai co it nhat mot tem."
+  "message": "Tem tai index 0 phai co remarks la Mau_01 hoac Mau_02."
 }
 ```
+
+Malformed JSON, a non-array `labels` field, non-object labels, and unknown
+`remarks` values return HTTP `400` with the same response shape.
 
 Paths beginning with `@docs/...` assume the terminal is in the
 `printer_pyside6_qml` project directory. When the terminal is already in

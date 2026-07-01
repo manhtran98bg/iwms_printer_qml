@@ -21,6 +21,8 @@ logger = logging.getLogger(__name__)
 class PrintWorkflowService(QObject):
     """Coordinates validation, template rendering, and printing."""
 
+    _remarks_field = "remarks"
+    _allowed_remarks = ("Mau_01", "Mau_02")
     _zpl_printer_tokens = (
         "zebra",
         "zdesigner",
@@ -169,6 +171,15 @@ class PrintWorkflowService(QObject):
         template_text = self._print_template_service.load_template(template_path)
         return self._print_template_service.discover_fields(template_text)
 
+    def validate_api_request(self, request: PrintRequest) -> None:
+        self._validate_request(request)
+        rendered_pages = self._render_routed_pages(request)
+        logger.info(
+            "Validated API print request: labels=%s pages=%s",
+            len(request.labels),
+            len(rendered_pages),
+        )
+
     def _validate_config(self, config: object) -> None:
         if not getattr(config, "printer_name", ""):
             raise PrintRequestError("Ch\u01b0a ch\u1ecdn m\u00e1y in.")
@@ -206,22 +217,16 @@ class PrintWorkflowService(QObject):
     ) -> list[str]:
         if auto_route:
             logger.info("Rendering pages with automatic format routing")
-            return self._render_routed_pages(config, request)
+            return self._render_routed_pages(request)
 
         print_format = self._render_format(config)
         return self._render_labels(print_format, request.labels)
 
-    def _render_routed_pages(
-        self,
-        config: PrinterConfig,
-        request: PrintRequest,
-    ) -> list[str]:
-        fallback_format = self._render_format(config)
+    def _render_routed_pages(self, request: PrintRequest) -> list[str]:
         routed_formats = self._load_routed_formats()
         logger.info(
-            "Loaded %s routed format(s); fallback=%s",
+            "Loaded %s routed format(s)",
             len(routed_formats),
-            fallback_format.template_path,
         )
         rendered_pages: list[str] = []
         current_format: PrintFormat | None = None
@@ -235,11 +240,9 @@ class PrintWorkflowService(QObject):
             current_format = None
             current_labels = []
 
-        for label in request.labels:
-            matched_format = (
-                self._print_template_service.matching_format(label, routed_formats)
-                or fallback_format
-            )
+        for index, label in enumerate(request.labels):
+            self._validate_label_remarks(label, index)
+            matched_format = self._routed_format_for_label(label, routed_formats, index)
             if current_format is None:
                 current_format = matched_format
             elif self._format_key(current_format) != self._format_key(matched_format):
@@ -249,6 +252,33 @@ class PrintWorkflowService(QObject):
 
         flush_current_labels()
         return rendered_pages
+
+    def _validate_label_remarks(self, label: dict, index: int) -> None:
+        remarks = label.get(self._remarks_field)
+        if remarks not in self._allowed_remarks:
+            raise PrintRequestError(
+                f"Tem t\u1ea1i index {index} ph\u1ea3i c\u00f3 remarks l\u00e0 Mau_01 ho\u1eb7c Mau_02."
+            )
+
+    def _routed_format_for_label(
+        self,
+        label: dict,
+        routed_formats: list[PrintFormat],
+        index: int,
+    ) -> PrintFormat:
+        matched_format = self._print_template_service.matching_format(label, routed_formats)
+        if matched_format is None:
+            remarks = label.get(self._remarks_field)
+            raise PrintRequestError(
+                f"Tem t\u1ea1i index {index} kh\u00f4ng match template n\u00e0o cho remarks={remarks!r}."
+            )
+        logger.debug(
+            "Matched template for label index=%s remarks=%s template=%s",
+            index,
+            label.get(self._remarks_field),
+            matched_format.template_path,
+        )
+        return matched_format
 
     def _render_labels(
         self,

@@ -27,6 +27,9 @@ class ApplicationContainer:
             print_template_service=self.print_template_service,
             printer_service=self.printer_service,
         )
+        self.server_handler_service.set_request_validator(
+            self.print_workflow_service.validate_api_request
+        )
         self.main_viewmodel = MainViewModel(
             settings_repository=self.settings_repository_service,
             printer_service=self.printer_service,

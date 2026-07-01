@@ -20,9 +20,9 @@
   "routing": {
     "priority": 20,
     "match": {
-      "field": "customer",
-      "regex": "ASSY",
-      "flags": "i"
+      "field": "remarks",
+      "regex": "^Mau_01$",
+      "flags": ""
     }
   },
   "printSettings": {

@@ -13,6 +13,7 @@
     "im_box": "1",
     "shift": "1",
     "customer": "CANON QV",
+    "remarks": "Mau_02",
     "qty_box_barcode": "*RU1-0404/144-00-26*",
     "master_data": {
       "packing_kit": "KIT604"
@@ -33,6 +34,7 @@
     "im_box": "2",
     "shift": "2",
     "customer": "CANON QV",
+    "remarks": "Mau_02",
     "qty_box_barcode": "*RC4-3605/1600-00-26*",
     "master_data": {
       "packing_kit": "KIT608"
