@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import replace
 from datetime import datetime
+import logging
 from pathlib import Path
 from urllib.parse import unquote, urlparse
 
@@ -9,7 +10,6 @@ from PySide6.QtCore import Property, Signal, Slot
 
 from src.core.constants import APP_TITLE
 from src.core.runtime_paths import DEFAULT_TEMPLATE_DIR
-from src.models.printer_config import PrinterConfig
 from src.models.print_request import PrintRequest
 from src.services.printer_service import PrinterService
 from src.services.print_template_service import PrintTemplateService
@@ -17,6 +17,9 @@ from src.services.print_workflow_service import PrintWorkflowService
 from src.services.server_handler_service import ServerHandlerService
 from src.services.settings_repository_service import SettingsRepositoryService
 from src.viewmodels.base_viewmodel import BaseViewModel
+
+
+logger = logging.getLogger(__name__)
 
 
 class MainViewModel(BaseViewModel):
@@ -59,6 +62,7 @@ class MainViewModel(BaseViewModel):
         self._margin_left = 0
         self._margin_top = 0
 
+        logger.info("Initializing main view model")
         self._server_handler_service.started.connect(self._on_api_started)
         self._server_handler_service.stopped.connect(self._on_api_stopped)
         self._server_handler_service.failed.connect(self._on_api_failed)
@@ -70,6 +74,7 @@ class MainViewModel(BaseViewModel):
             self._load_format_file(self._config.data_path, reset_rows=False)
         else:
             self._refresh_raw_zpl_preview()
+        logger.info("Main view model initialized")
 
     @Property(str, constant=True)
     def app_title(self) -> str:
@@ -172,13 +177,20 @@ class MainViewModel(BaseViewModel):
             self._update_config(printer_name=self._printers[0])
         self.printersChanged.emit()
         self.set_status(f"\u0110\u00e3 t\u1ea3i {len(self._printers)} m\u00e1y in.")
+        logger.info(
+            "Refreshed printers: count=%s selected=%s",
+            len(self._printers),
+            self._config.printer_name or "-",
+        )
 
     @Slot()
     def start_api(self) -> None:
+        logger.info("Starting API from view model: url=%s", self._config.api_url)
         self._server_handler_service.start(self._config.api_url)
 
     @Slot()
     def stop_api(self) -> None:
+        logger.info("Stopping API from view model")
         self._server_handler_service.stop()
 
     @Slot(str)
@@ -193,21 +205,26 @@ class MainViewModel(BaseViewModel):
         value = api_url.strip()
         if value and not value.endswith("/"):
             value += "/"
+        logger.info("Updating API URL to %s", value)
         self._update_config(api_url=value)
 
     @Slot(str)
     def set_template_path(self, template_path: str) -> None:
-        self._update_config(template_path=self._clean_file_url(template_path))
+        cleaned_path = self._clean_file_url(template_path)
+        logger.info("Updating template path to %s", cleaned_path)
+        self._update_config(template_path=cleaned_path)
         self._refresh_raw_zpl_preview()
 
     @Slot(str)
     def set_data_path(self, data_path: str) -> None:
         cleaned_path = self._clean_file_url(data_path)
+        logger.info("Updating schema path to %s", cleaned_path)
         self._update_config(data_path=cleaned_path)
         self._load_format_file(cleaned_path, reset_rows=True)
 
     @Slot(str)
     def set_printer_name(self, printer_name: str) -> None:
+        logger.info("Updating selected printer to %s", printer_name)
         self._update_config(printer_name=printer_name)
 
     @Slot(int)
@@ -221,6 +238,7 @@ class MainViewModel(BaseViewModel):
     @Slot()
     def print_test(self) -> None:
         request = PrintRequest(labels=self._test_labels())
+        logger.info("Submitting test print from view model with %s label(s)", len(request.labels))
         self._print_workflow_service.submit_test(request)
 
     @Slot()
@@ -230,8 +248,10 @@ class MainViewModel(BaseViewModel):
     @Slot()
     def reload_schema(self) -> None:
         if not self._config.data_path:
+            logger.info("Reload schema requested without selected schema")
             self.set_status("Ch\u01b0a ch\u1ecdn file schema.")
             return
+        logger.info("Reloading schema from %s", self._config.data_path)
         self._load_format_file(self._config.data_path, reset_rows=True)
 
     @Slot(int, str, str)
@@ -261,16 +281,19 @@ class MainViewModel(BaseViewModel):
         self._api_running = True
         self.apiRunningChanged.emit()
         self.set_status(f"M\u00e1y ch\u1ee7 API \u0111\u00e3 kh\u1edfi \u0111\u1ed9ng t\u1ea1i {url}")
+        logger.info("API started at %s", url)
 
     def _on_api_stopped(self) -> None:
         self._api_running = False
         self.apiRunningChanged.emit()
         self.set_status("M\u00e1y ch\u1ee7 API \u0111\u00e3 d\u1eebng")
+        logger.info("API stopped")
 
     def _on_api_failed(self, message: str) -> None:
         self._api_running = False
         self.apiRunningChanged.emit()
         self.set_status(message)
+        logger.error("API failed: %s", message)
 
     def _on_request_processed(self, status: str, success: bool) -> None:
         self._last_request_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -279,10 +302,18 @@ class MainViewModel(BaseViewModel):
         if not success:
             self._failed_count += 1
         self.requestStatsChanged.emit()
+        logger.info(
+            "Request processed: status=%s success=%s total=%s failed=%s",
+            status,
+            success,
+            self._request_count,
+            self._failed_count,
+        )
 
     def _on_print_started(self, payload: object) -> None:
         label_count = len(payload.get("labels", [])) if isinstance(payload, dict) else 0
         self.set_status(f"\u0110ang x\u1eed l\u00fd {label_count} tem...")
+        logger.info("Print started: labels=%s", label_count)
 
     def _on_print_finished(self, payload: object) -> None:
         if isinstance(payload, dict):
@@ -294,11 +325,20 @@ class MainViewModel(BaseViewModel):
                 f"m\u00e1y in {payload.get('printer_name', '-')}."
                 + (f" File ZPL: {output_path}" if output_path else "")
             )
+            logger.info(
+                "Print finished: labels=%s pages=%s printer=%s output=%s",
+                payload.get("label_count", 0),
+                payload.get("page_count", 0),
+                payload.get("printer_name", "-"),
+                output_path or "-",
+            )
             return
         self.set_status("\u0110\u00e3 in xong.")
+        logger.info("Print finished")
 
     def _on_print_failed(self, message: str) -> None:
         self.set_status(f"In th\u1ea5t b\u1ea1i: {message}")
+        logger.error("Print failed: %s", message)
 
     def _update_config(self, **changes: object) -> None:
         next_config = replace(self._config, **changes)
@@ -308,9 +348,11 @@ class MainViewModel(BaseViewModel):
         try:
             self._settings_repository.save(self._config)
         except OSError as exc:
+            logger.exception("Failed to save config")
             self.set_status(f"Kh\u00f4ng th\u1ec3 l\u01b0u c\u00e0i \u0111\u1eb7t: {exc}")
             return
         self.configChanged.emit()
+        logger.info("Config updated: %s", ", ".join(sorted(changes)))
 
     def _load_format_file(self, data_path: str, reset_rows: bool) -> None:
         if not data_path:
@@ -327,6 +369,7 @@ class MainViewModel(BaseViewModel):
                 )
             )
         except Exception as exc:
+            logger.exception("Failed to load schema from %s", data_path)
             self._set_template_preview_path("")
             self.set_status(f"Kh\u00f4ng th\u1ec3 t\u1ea3i schema: {exc}")
             return
@@ -351,8 +394,14 @@ class MainViewModel(BaseViewModel):
                 "\u0110\u00e3 t\u1ea3i schema, nh\u01b0ng template thi\u1ebfu: "
                 + ", ".join(missing_fields)
             )
+            logger.warning("Loaded schema with missing template fields: %s", missing_fields)
             return
         self.set_status(f"\u0110\u00e3 t\u1ea3i schema: {len(self._required_fields)} tr\u01b0\u1eddng.")
+        logger.info(
+            "Loaded schema: path=%s required_fields=%s",
+            data_path,
+            len(self._required_fields),
+        )
 
     def _set_template_preview_path(self, preview_path: str) -> None:
         if preview_path == self._template_preview_path:
@@ -369,6 +418,7 @@ class MainViewModel(BaseViewModel):
 
     def _save_print_settings(self, margin_left: int, margin_top: int) -> None:
         if not self._config.data_path:
+            logger.info("Save print settings requested without selected schema")
             self.set_status("Ch\u01b0a ch\u1ecdn file schema.")
             return
         try:
@@ -378,11 +428,13 @@ class MainViewModel(BaseViewModel):
                 margin_top,
             )
         except Exception as exc:
+            logger.exception("Failed to save print settings")
             self.set_status(f"Kh\u00f4ng th\u1ec3 l\u01b0u margin: {exc}")
             return
         self._set_print_settings(margin_left, margin_top)
         self._refresh_raw_zpl_preview()
         self.set_status(f"\u0110\u00e3 l\u01b0u margin: left {margin_left}, top {margin_top} dot.")
+        logger.info("Saved print settings: margin_left=%s margin_top=%s", margin_left, margin_top)
 
     def _clean_file_url(self, value: str) -> str:
         if not value:
@@ -433,6 +485,10 @@ class MainViewModel(BaseViewModel):
                 self._config.template_path
             ))
         except Exception:
+            logger.exception(
+                "Failed to read template column count from %s",
+                self._config.template_path,
+            )
             return 1
 
     def _refresh_raw_zpl_preview(self) -> None:
@@ -445,9 +501,14 @@ class MainViewModel(BaseViewModel):
                 PrintRequest(labels=self._test_labels())
             )
         except Exception:
+            logger.exception("Failed to render raw ZPL preview")
             try:
                 self._raw_zpl_preview = Path(self._config.template_path).read_text(encoding="utf-8")
             except Exception:
+                logger.exception(
+                    "Failed to read raw ZPL template from %s",
+                    self._config.template_path,
+                )
                 self._raw_zpl_preview = ""
         else:
             self._raw_zpl_preview = template_text

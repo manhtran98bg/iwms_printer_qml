@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import socket
 import threading
 from dataclasses import dataclass
@@ -10,6 +11,9 @@ from PySide6.QtCore import QObject, Signal, Slot
 
 from src.models.api_response import ApiResponse
 from src.models.print_request import PrintRequest
+
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -40,6 +44,7 @@ class ServerHandlerService(QObject):
     @Slot(str)
     def start(self, url: str) -> None:
         if self._running:
+            logger.info("API server start requested while already running at %s", self._url)
             return
         try:
             endpoint = self._parse_endpoint(url)
@@ -47,11 +52,19 @@ class ServerHandlerService(QObject):
             app = self._create_app(endpoint.path)
             self._server = self._create_uvicorn_server(app, endpoint.host, endpoint.port)
         except Exception as exc:
+            logger.exception("Failed to start API server for url=%s", url)
             self.failed.emit(f"Kh\u00f4ng th\u1ec3 kh\u1edfi \u0111\u1ed9ng m\u00e1y ch\u1ee7 API: {exc}")
             return
 
         self._url = endpoint.display_url
         self._running = True
+        logger.info(
+            "Starting API server at %s (host=%s, port=%s, path=%s)",
+            endpoint.display_url,
+            endpoint.host,
+            endpoint.port,
+            endpoint.path,
+        )
         self._thread = threading.Thread(
             target=self._run_server,
             name="iwms-printer-api",
@@ -64,16 +77,19 @@ class ServerHandlerService(QObject):
     def stop(self) -> None:
         with self._stop_lock:
             if not self._running:
+                logger.info("API server stop requested while not running")
                 return
             server = self._server
             thread = self._thread
             self._running = False
             if server is not None:
                 server.should_exit = True
+            logger.info("Stopping API server at %s", self._url)
         if thread is not None and thread.is_alive():
             thread.join(timeout=3)
         self._server = None
         self._thread = None
+        logger.info("API server stopped")
         self.stopped.emit()
 
     def request_stop(self) -> None:
@@ -82,12 +98,15 @@ class ServerHandlerService(QObject):
     def _run_server(self) -> None:
         try:
             if self._server is not None:
+                logger.info("API server thread started")
                 self._server.run()
         except Exception as exc:
             self._running = False
+            logger.exception("API server stopped unexpectedly")
             self.failed.emit(f"M\u00e1y ch\u1ee7 API d\u1eebng b\u1ea5t th\u01b0\u1eddng: {exc}")
         finally:
             self._running = False
+            logger.info("API server thread finished")
 
     def _create_app(self, path: str) -> Any:
         from fastapi import Body, FastAPI
@@ -104,6 +123,7 @@ class ServerHandlerService(QObject):
 
         @app.get(path)
         async def health_check() -> PlainTextResponse:
+            logger.info("Health check request processed")
             return PlainTextResponse("San sang")
 
         @app.options(path)
@@ -114,6 +134,10 @@ class ServerHandlerService(QObject):
         async def print_labels(body: Any = Body(...)) -> JSONResponse:
             try:
                 print_request = self._parse_print_request(body)
+                logger.info(
+                    "Print request accepted with %s label(s)",
+                    len(print_request.labels),
+                )
                 self.print_request_received.emit(print_request)
                 self.request_processed.emit("200 OK", True)
                 return JSONResponse(
@@ -123,6 +147,7 @@ class ServerHandlerService(QObject):
                     ).to_dict()
                 )
             except Exception as exc:
+                logger.exception("Print request rejected")
                 self.request_processed.emit("400 Bad Request", False)
                 return JSONResponse(
                     ApiResponse(success=False, message=str(exc)).to_dict(),
@@ -145,6 +170,7 @@ class ServerHandlerService(QObject):
 
     def _parse_print_request(self, body: Any) -> PrintRequest:
         print_request = PrintRequest.from_compatible_body(body)
+        logger.debug("Parsed print request with %s label(s)", len(print_request.labels))
         if not print_request.labels:
             raise ValueError("Request body ph\u1ea3i c\u00f3 \u00edt nh\u1ea5t m\u1ed9t tem.")
         for index, label in enumerate(print_request.labels):

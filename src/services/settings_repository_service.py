@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from json import JSONDecodeError
+import logging
 from pathlib import Path
 import shutil
 from typing import Any
@@ -15,6 +16,9 @@ from src.core.constants import (
 )
 from src.core.runtime_paths import ASSETS_TEMPLATE_ROOT, CONFIG_PATH, DEFAULT_TEMPLATE_DIR
 from src.models.printer_config import PrinterConfig
+
+
+logger = logging.getLogger(__name__)
 
 
 class SettingsRepositoryService(QObject):
@@ -31,16 +35,24 @@ class SettingsRepositoryService(QObject):
     def load(self) -> PrinterConfig:
         self._ensure_default_template_files()
         if not self._config_path.exists():
+            logger.info(
+                "Config file does not exist; creating default config at %s",
+                self._config_path,
+            )
             config = self._default_config()
             self.save(config)
             return config
         try:
             payload = json.loads(self._config_path.read_text(encoding="utf-8"))
         except (OSError, JSONDecodeError):
+            logger.exception("Failed to load config from %s", self._config_path)
             return PrinterConfig()
         if not isinstance(payload, dict):
+            logger.error("Config payload is not an object: %s", self._config_path)
             return PrinterConfig()
-        return self._normalize_config(payload)
+        config = self._normalize_config(payload)
+        logger.info("Loaded config from %s", self._config_path)
+        return config
 
     def save(self, config: PrinterConfig) -> None:
         self._config_path.parent.mkdir(parents=True, exist_ok=True)
@@ -48,6 +60,7 @@ class SettingsRepositoryService(QObject):
             json.dumps(config.to_dict(), ensure_ascii=False, indent=2),
             encoding="utf-8",
         )
+        logger.info("Saved config to %s", self._config_path)
 
     def _normalize_config(self, payload: dict[str, Any]) -> PrinterConfig:
         config = PrinterConfig.from_dict(payload)
@@ -88,4 +101,5 @@ class SettingsRepositoryService(QObject):
     def _copy_default_file(self, source: Path, destination: Path) -> None:
         if destination.exists():
             return
+        logger.info("Copying default template file from %s to %s", source, destination)
         shutil.copyfile(source, destination)

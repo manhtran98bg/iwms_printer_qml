@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+import logging
 
 from PySide6.QtCore import QObject, Signal, Slot
 
@@ -12,6 +13,9 @@ from src.models.print_request import PrintRequest
 from src.services.printer_service import PrinterService
 from src.services.print_template_service import PrintTemplateService
 from src.services.settings_repository_service import SettingsRepositoryService
+
+
+logger = logging.getLogger(__name__)
 
 
 class PrintWorkflowService(QObject):
@@ -63,15 +67,29 @@ class PrintWorkflowService(QObject):
 
     @Slot(object)
     def submit(self, request: PrintRequest) -> None:
+        logger.info("Print workflow started with %s label(s)", len(request.labels))
         self.print_started.emit(request.to_dict())
         try:
             config = self._settings_repository.load()
+            logger.info(
+                "Loaded print config for printer=%s template=%s data=%s",
+                config.printer_name or "-",
+                config.template_path or "-",
+                config.data_path or "-",
+            )
             self._validate_config(config)
             self._validate_request(request)
             rendered_pages = self._print_raw(config, request)
         except Exception as exc:
+            logger.exception("Print workflow failed")
             self.print_failed.emit(str(exc))
             return
+        logger.info(
+            "Print workflow finished: labels=%s pages=%s printer=%s",
+            len(request.labels),
+            len(rendered_pages),
+            config.printer_name,
+        )
         self.print_finished.emit(
             {
                 "label_count": len(request.labels),
@@ -82,17 +100,32 @@ class PrintWorkflowService(QObject):
 
     @Slot(object)
     def submit_test(self, request: PrintRequest) -> None:
+        logger.info("Test print workflow started with %s label(s)", len(request.labels))
         self.print_started.emit(request.to_dict())
         try:
             config = self._settings_repository.load()
+            logger.info(
+                "Loaded test print config for printer=%s template=%s data=%s",
+                config.printer_name or "-",
+                config.template_path or "-",
+                config.data_path or "-",
+            )
             self._validate_test_config(config)
             self._validate_request(request)
             rendered_pages = self._render_pages(config, request, auto_route=False)
             output_path = self._write_test_output(rendered_pages)
             self._printer_service.print_raw(config.printer_name, rendered_pages)
         except Exception as exc:
+            logger.exception("Test print workflow failed")
             self.print_failed.emit(str(exc))
             return
+        logger.info(
+            "Test print workflow finished: labels=%s pages=%s printer=%s output=%s",
+            len(request.labels),
+            len(rendered_pages),
+            config.printer_name,
+            output_path,
+        )
         self.print_finished.emit(
             {
                 "label_count": len(request.labels),
@@ -106,6 +139,7 @@ class PrintWorkflowService(QObject):
     def preview(self, request: PrintRequest) -> str:
         config = self._settings_repository.load()
         if not getattr(config, "template_path", ""):
+            logger.info("Skipping preview render because template path is empty")
             return ""
         print_format = self._render_format(config)
         template_text = self._print_template_service.load_template(print_format.template_path)
@@ -118,6 +152,12 @@ class PrintWorkflowService(QObject):
             print_format.margin_top,
             print_format.variables,
             print_format.computed_fields,
+        )
+        logger.debug(
+            "Rendered preview: labels=%s pages=%s template=%s",
+            len(request.labels),
+            len(rendered_pages),
+            print_format.template_path,
         )
         return "\n".join(rendered_pages)
 
@@ -150,6 +190,11 @@ class PrintWorkflowService(QObject):
 
     def _print_raw(self, config: PrinterConfig, request: PrintRequest) -> list[str]:
         rendered_pages = self._render_pages(config, request, auto_route=True)
+        logger.info(
+            "Sending %s rendered page(s) to printer %s",
+            len(rendered_pages),
+            config.printer_name,
+        )
         self._printer_service.print_raw(config.printer_name, rendered_pages)
         return rendered_pages
 
@@ -160,6 +205,7 @@ class PrintWorkflowService(QObject):
         auto_route: bool = False,
     ) -> list[str]:
         if auto_route:
+            logger.info("Rendering pages with automatic format routing")
             return self._render_routed_pages(config, request)
 
         print_format = self._render_format(config)
@@ -172,6 +218,11 @@ class PrintWorkflowService(QObject):
     ) -> list[str]:
         fallback_format = self._render_format(config)
         routed_formats = self._load_routed_formats()
+        logger.info(
+            "Loaded %s routed format(s); fallback=%s",
+            len(routed_formats),
+            fallback_format.template_path,
+        )
         rendered_pages: list[str] = []
         current_format: PrintFormat | None = None
         current_labels: list[dict] = []
@@ -206,7 +257,7 @@ class PrintWorkflowService(QObject):
     ) -> list[str]:
         template_text = self._print_template_service.load_template(print_format.template_path)
         columns = self._print_template_service.discover_column_count(template_text)
-        return self._print_template_service.render(
+        rendered_pages = self._print_template_service.render(
             template_text,
             labels,
             columns,
@@ -215,6 +266,14 @@ class PrintWorkflowService(QObject):
             print_format.variables,
             print_format.computed_fields,
         )
+        logger.info(
+            "Rendered labels: labels=%s pages=%s columns=%s template=%s",
+            len(labels),
+            len(rendered_pages),
+            columns,
+            print_format.template_path,
+        )
+        return rendered_pages
 
     def _render_format(self, config: PrinterConfig) -> PrintFormat:
         if config.data_path:
@@ -226,6 +285,7 @@ class PrintWorkflowService(QObject):
             self._routed_formats = self._print_template_service.load_routed_formats(
                 ASSETS_TEMPLATE_ROOT
             )
+            logger.info("Cached %s routed print format(s)", len(self._routed_formats))
         return self._routed_formats
 
     def _format_key(self, print_format: PrintFormat) -> str:
@@ -237,6 +297,7 @@ class PrintWorkflowService(QObject):
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         output_path = output_dir / f"test_print_{timestamp}.txt"
         output_path.write_text("\n".join(rendered_pages), encoding="utf-8")
+        logger.info("Wrote test print output to %s", output_path)
         return output_path
 
     def _is_zpl_printer(self, printer_name: str) -> bool:

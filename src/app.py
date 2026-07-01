@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import os
 import sys
 from pathlib import Path
@@ -12,6 +13,7 @@ from PySide6.QtCore import QUrl
 from src.composition.application_container import ApplicationContainer
 from src.composition.qml_context import bind_qml_context
 from src.core.constants import APP_NAME
+from src.core.logging_config import configure_logging
 
 try:
     from src import resources_rc  # noqa: F401
@@ -19,7 +21,12 @@ except ImportError:
     resources_rc = None
 
 
+logger = logging.getLogger(__name__)
+
+
 def run() -> int:
+    configure_logging()
+    logger.info("Starting %s", APP_NAME)
     os.environ.setdefault("QT_QUICK_CONTROLS_STYLE", "Basic")
 
     app = QGuiApplication(sys.argv)
@@ -41,7 +48,11 @@ def run() -> int:
     engine.addImportPath(str(qml_root))
     engine.load(QUrl.fromLocalFile(str(qml_root / "Main.qml")))
     if not engine.rootObjects():
+        logger.error("Failed to load QML root from %s", qml_root / "Main.qml")
         return 1
+    logger.info("Loaded QML root from %s", qml_root / "Main.qml")
 
     container.start()
-    return app.exec()
+    exit_code = app.exec()
+    logger.info("Application exited with code %s", exit_code)
+    return exit_code
