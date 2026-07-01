@@ -3,11 +3,12 @@
 ^PW1181
 ^LL827
 
+^POI
 ^FX =========================================================
 ^FX TEM 100mm x 70mm @ 300dpi NIDEC ASSY
 ^FX Full size: 1181 x 827 dots
 ^FX =========================================================
-^LH10,0
+^LH30,0
 ^LS{{margin_left}}
 ^LT{{margin_top}}
 
@@ -52,6 +53,7 @@
 ^FO530,18^AZN,25^FDNIDEC INSTRUMENTS (HANOI) CORPORATION^FS
 ^FO10,66^AZN,26^FDMold No:^FS
 ^FO410,66^AZN,26^FDParts No:^FS
+^FO981,58^AZN,44^FD-^FS
 ^FO10,135^AZN,26^FDParts Name:^FS
 ^FO10,204^AZN,26^FDQ'ty unit:^FS
 ^FO10,273^AZN,26^FDKind of unit:^FS
@@ -64,7 +66,7 @@
 ^FO10,480^AZN,26^FDIM Box:^FS
 ^FO10,549^AZN,26^FDShift:^FS
 ^FO10,616^AZN,26^FDCustomer:^FS
-^FO10,706^AZN,26^FDQ'ty box:^FS
+^FO10,706^AZN,26^FDQ'ty/ box:^FS
 ^FO865,412^AZN,32^FDQC PASS Signal^FS
 
 
@@ -79,41 +81,44 @@
 ^FO146,60^AZN,40^FDmold_no_0^FS
 
 ^FX ("parts_no": "RU1-0404)
-^FO621,58^AZN,44^FDparts_no_0^FS
+^FO621,58^AZN,46^FDparts_no_0^FS
 
-^FX ( "parts_name": "MP Kicker_Guide_Arm")
-^FO410,130^AZN,44^FDparts_name_0^FS
+^FX ("die_no": "V1")
+^FO1010,58^AZN,46^FDdie_no_0^FS
+
+^FX ( "product_name": "MP Kicker_Guide_Arm")
+^FO410,130^AZN,44^FDproduct_name_0^FS
 
 
 ^FX ("qty_unit_barcode": "*RU1-0404/360-00-26*")
 ^FO280,192^BY2^BCN,50,N,N,N^FDqty_unit_barcode_0^FS
 
-^FX (master_data["packing_kit"]: "KIT604")
-^FO220,270^AZN,34,34^FDmaster_data.packing_kit_0^FS
+^FX ("packing_kit": "KIT604")
+^FO220,270^AZN,34,34^FDpacking_kit_0^FS
 
-^FX ("qty_unit": "360")
-^FO600,260^AZN,56^FDqty_unit_0^FS
+^FX ("qty_per_kit": "360")
+^FO600,260^AZN,56^FDqty_per_kit_0^FS
 
 ^FX ("rev_his": "008/009")
 ^FO220,334^AZN,40^FDrev_his_0^FS
 
-^FX ("unit_box": "1")
-^FO580,334^AZN,40^FDunit_box_0^FS
+^FX ("packing_kit_per_box": "1")
+^FO580,334^AZN,40^FDpacking_kit_per_box_0^FS
 
-^FX ("total_qty": "360")
-^FO900,334^AZN,56^FDtotal_qty_0^FS
+^FX ("packing_pcs_per_box": "360")
+^FO900,334^AZN,56^FDpacking_pcs_per_box_0^FS
 
 ^FX ("production_date": "12-06-26")
 ^FO460,408^AZN,42^FDproduction_date_0^FS
 
-^FX ("im_box": "1")
-^FO500,472^AZN,46^FDim_box_0^FS
+^FX ("label": "1")
+^FO500,472^AZN,46^FDlabel_0^FS
 
 ^FX ("shift": "1   2")
-^FO435,546^AZN,40^FDshift_0^FS
+^FO435,546^AZN,40^FD1         2^FS
 
 ^FX ("customer": "ASSY")
-^FO346,612^AZN,46^FDcustomer_0^FS
+^FO200,612^AZN,46^FDcustomer_0^FS
 
 ^FX ("qty_box_barcode": "*RU1-0404/144-00-26*")
 ^FO280,690^BY2^BCN,50,N,N,N^FDqty_box_barcode_0^FS

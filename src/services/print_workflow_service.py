@@ -5,7 +5,8 @@ from datetime import datetime
 from PySide6.QtCore import QObject, Signal, Slot
 
 from src.core.errors import PrintRequestError
-from src.core.runtime_paths import APP_ENVIRONMENT_ROOT
+from src.core.runtime_paths import APP_ENVIRONMENT_ROOT, ASSETS_TEMPLATE_ROOT
+from src.models.print_format import PrintFormat
 from src.models.printer_config import PrinterConfig
 from src.models.print_request import PrintRequest
 from src.services.printer_service import PrinterService
@@ -58,6 +59,7 @@ class PrintWorkflowService(QObject):
         self._settings_repository = settings_repository
         self._print_template_service = print_template_service
         self._printer_service = printer_service
+        self._routed_formats: list[PrintFormat] | None = None
 
     @Slot(object)
     def submit(self, request: PrintRequest) -> None:
@@ -85,7 +87,7 @@ class PrintWorkflowService(QObject):
             config = self._settings_repository.load()
             self._validate_test_config(config)
             self._validate_request(request)
-            rendered_pages = self._render_pages(config, request)
+            rendered_pages = self._render_pages(config, request, auto_route=False)
             output_path = self._write_test_output(rendered_pages)
             self._printer_service.print_raw(config.printer_name, rendered_pages)
         except Exception as exc:
@@ -105,15 +107,17 @@ class PrintWorkflowService(QObject):
         config = self._settings_repository.load()
         if not getattr(config, "template_path", ""):
             return ""
-        template_path, margin_left, margin_top = self._render_settings(config)
-        template_text = self._print_template_service.load_template(template_path)
+        print_format = self._render_format(config)
+        template_text = self._print_template_service.load_template(print_format.template_path)
         columns = self._print_template_service.discover_column_count(template_text)
         rendered_pages = self._print_template_service.render(
             template_text,
             request.labels,
             columns,
-            margin_left,
-            margin_top,
+            print_format.margin_left,
+            print_format.margin_top,
+            print_format.variables,
+            print_format.computed_fields,
         )
         return "\n".join(rendered_pages)
 
@@ -145,31 +149,87 @@ class PrintWorkflowService(QObject):
                 raise PrintRequestError(f"Tem t\u1ea1i index {index} ph\u1ea3i l\u00e0 object.")
 
     def _print_raw(self, config: PrinterConfig, request: PrintRequest) -> list[str]:
-        rendered_pages = self._render_pages(config, request)
+        rendered_pages = self._render_pages(config, request, auto_route=True)
         self._printer_service.print_raw(config.printer_name, rendered_pages)
         return rendered_pages
 
-    def _render_pages(self, config: PrinterConfig, request: PrintRequest) -> list[str]:
-        template_path, margin_left, margin_top = self._render_settings(config)
-        template_text = self._print_template_service.load_template(template_path)
+    def _render_pages(
+        self,
+        config: PrinterConfig,
+        request: PrintRequest,
+        auto_route: bool = False,
+    ) -> list[str]:
+        if auto_route:
+            return self._render_routed_pages(config, request)
+
+        print_format = self._render_format(config)
+        return self._render_labels(print_format, request.labels)
+
+    def _render_routed_pages(
+        self,
+        config: PrinterConfig,
+        request: PrintRequest,
+    ) -> list[str]:
+        fallback_format = self._render_format(config)
+        routed_formats = self._load_routed_formats()
+        rendered_pages: list[str] = []
+        current_format: PrintFormat | None = None
+        current_labels: list[dict] = []
+
+        def flush_current_labels() -> None:
+            nonlocal current_format, current_labels
+            if current_format is None or not current_labels:
+                return
+            rendered_pages.extend(self._render_labels(current_format, current_labels))
+            current_format = None
+            current_labels = []
+
+        for label in request.labels:
+            matched_format = (
+                self._print_template_service.matching_format(label, routed_formats)
+                or fallback_format
+            )
+            if current_format is None:
+                current_format = matched_format
+            elif self._format_key(current_format) != self._format_key(matched_format):
+                flush_current_labels()
+                current_format = matched_format
+            current_labels.append(label)
+
+        flush_current_labels()
+        return rendered_pages
+
+    def _render_labels(
+        self,
+        print_format: PrintFormat,
+        labels: list[dict],
+    ) -> list[str]:
+        template_text = self._print_template_service.load_template(print_format.template_path)
         columns = self._print_template_service.discover_column_count(template_text)
         return self._print_template_service.render(
             template_text,
-            request.labels,
+            labels,
             columns,
-            margin_left,
-            margin_top,
+            print_format.margin_left,
+            print_format.margin_top,
+            print_format.variables,
+            print_format.computed_fields,
         )
 
-    def _render_settings(self, config: PrinterConfig) -> tuple[str, int, int]:
+    def _render_format(self, config: PrinterConfig) -> PrintFormat:
         if config.data_path:
-            print_format = self._print_template_service.load_format(config.data_path)
-            return (
-                print_format.template_path,
-                print_format.margin_left,
-                print_format.margin_top,
+            return self._print_template_service.load_format(config.data_path)
+        return PrintFormat(template_path=config.template_path)
+
+    def _load_routed_formats(self) -> list[PrintFormat]:
+        if self._routed_formats is None:
+            self._routed_formats = self._print_template_service.load_routed_formats(
+                ASSETS_TEMPLATE_ROOT
             )
-        return config.template_path, 0, 0
+        return self._routed_formats
+
+    def _format_key(self, print_format: PrintFormat) -> str:
+        return print_format.schema_path or print_format.template_path
 
     def _write_test_output(self, rendered_pages: list[str]):
         output_dir = APP_ENVIRONMENT_ROOT / "test_output"

@@ -2,11 +2,7 @@ from __future__ import annotations
 
 import json
 
-from src.core.constants import (
-    DEFAULT_SCHEMA_FILENAME,
-    DEFAULT_TEMPLATE_FILENAME,
-    DEFAULT_TEMPLATE_PREVIEW_FILENAME,
-)
+from src.core.constants import DEFAULT_SCHEMA_FILENAME, DEFAULT_TEMPLATE_FILENAME
 from src.services import settings_repository_service as settings_module
 from src.services.settings_repository_service import SettingsRepositoryService
 
@@ -20,10 +16,8 @@ def test_load_first_run_creates_default_template_files(tmp_path, monkeypatch):
 
     schema_path = template_dir / DEFAULT_SCHEMA_FILENAME
     template_path = template_dir / DEFAULT_TEMPLATE_FILENAME
-    preview_path = template_dir / DEFAULT_TEMPLATE_PREVIEW_FILENAME
     assert schema_path.exists()
     assert template_path.exists()
-    assert preview_path.exists()
     assert config.data_path == str(schema_path)
     assert config.template_path == str(template_path)
 

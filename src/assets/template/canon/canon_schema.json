@@ -1,34 +1,84 @@
 {
   "require": [
-    "qty_box_barcode",
+    "mold_no",
     "customer",
-    "im_box",
-    "parts_no",
-    "parts_name",
-    "kind_of_unit",
+    "part_no",
+    "customer_part_no",
+    "label",
+    "product_name_vn",
+    "packing_kit",
+    "packing_kit_per_box",
     "rev_his",
-    "master_data.die_no",
+    "rev",
+    "die_no",
+    "internal_die_no",
     "shift",
     "production_date",
-    "total_qty"
+    "packing_pcs_per_box"
   ],
   "templateFile": "canon_zpl_place_holder.zpl",
   "previewFile": "canon_preview.jpg",
+  "routing": {
+    "priority": 10,
+    "match": {
+      "field": "customer",
+      "regex": "CANON",
+      "flags": "i"
+    }
+  },
   "printSettings": {
-    "margin_left": 10,
-    "margin_top": -10
+    "margin_left": 15,
+    "margin_top": 20
+  },
+  "variables": {
+    "product_name_vn": {
+      "source": "product_name_vn",
+      "transform": {
+        "type": "truncate",
+        "maxLength": 25,
+        "suffix": "..."
+      }
+    },
+    "production_date_convert": {
+      "source": "production_date",
+      "transform": {
+        "type": "date",
+        "inputFormat": "%d-%m-%y",
+        "outputFormat": "%Y%m%d"
+      }
+    },
+    "label_convert": {
+      "source": "label",
+      "transform": {
+        "type": "padNumericSuffix",
+        "length": 4,
+        "character": "0"
+      }
+    }
+  },
+  "computedFields": {
+    "qty_box_barcode": {
+      "template": "{part_no}-{internal_die_no}/O{packing_pcs_per_box}{production_date}"
+    },
+    "qr_code": {
+      "template": "LA,{customer_part_no}/{internal_die_no}/N278/{production_date_convert}/{label_convert}/{packing_pcs_per_box}/{rev}//"
+    }
   },
   "defaults": {
-    "qty_box_barcode": "*RU1-0404/144-00-26*",
-    "customer": "CANON QV",
-    "im_box": "1",
-    "parts_no": "RU1-0404",
-    "parts_name": "W-Kakeha_Gear",
-    "kind_of_unit": "B9",
-    "rev_his": "008/009",
-    "master_data.die_no": "14A",
-    "shift": "1",
-    "production_date": "12-06-26",
-    "total_qty": "360"
+    "customer": "CANON VIỆT NAM (TL)",
+    "label": "7",
+    "mold_no": "269V-230",
+    "customer_part_no": "QC5-1076-000",
+    "part_no": "QC5-1076",
+    "product_name_vn": "Trục bánh răng bộ phận",
+    "packing_kit": "KIT 604",
+    "rev_his": "05/05",
+    "rev": "005",
+    "packing_kit_per_box": "4",
+    "die_no": "V1",
+    "internal_die_no": "V01",
+    "shift": "1     2",
+    "production_date": "18-06-26",
+    "packing_pcs_per_box": "2000"
   }
 }

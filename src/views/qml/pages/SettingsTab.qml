@@ -280,8 +280,8 @@ Item {
 
                     SpinBox {
                         Layout.preferredWidth: 140
-                        from: -20
-                        to: 20
+                        from: -100
+                        to: 100
                         stepSize: 1
                         editable: true
                         value: root.viewModel.margin_left
@@ -312,8 +312,8 @@ Item {
 
                     SpinBox {
                         Layout.preferredWidth: 140
-                        from: -20
-                        to: 20
+                        from: -100
+                        to: 100
                         stepSize: 1
                         editable: true
                         value: root.viewModel.margin_top

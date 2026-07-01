@@ -320,6 +320,12 @@ class MainViewModel(BaseViewModel):
             template_fields = self._print_workflow_service.template_fields(
                 print_format.template_path
             )
+            template_fields.extend(
+                self._print_template_service.computation_source_fields(
+                    print_format.variables,
+                    print_format.computed_fields,
+                )
+            )
         except Exception as exc:
             self._set_template_preview_path("")
             self.set_status(f"Kh\u00f4ng th\u1ec3 t\u1ea3i schema: {exc}")

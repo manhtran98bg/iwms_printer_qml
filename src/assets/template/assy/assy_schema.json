@@ -2,39 +2,65 @@
   "require": [
     "mold_no",
     "parts_no",
-    "parts_name",
-    "qty_unit_barcode",
-    "master_data.packing_kit",
-    "qty_unit",
+    "product_name",
+    "packing_kit",
+    "qty_per_kit",
     "rev_his",
-    "unit_box",
-    "total_qty",
+    "packing_kit_per_box",
+    "packing_pcs_per_box",
+    "die_no",
+    "internal_die_no",
     "production_date",
-    "im_box",
+    "label",
     "shift",
-    "customer",
-    "qty_box_barcode"
+    "customer"
   ],
   "templateFile": "assy_zpl_place_holder.zpl",
   "previewFile": "assy_preview.jpg",
+  "routing": {
+    "priority": 20,
+    "match": {
+      "field": "customer",
+      "regex": "ASSY",
+      "flags": "i"
+    }
+  },
   "printSettings": {
-    "margin_left": 0,
-    "margin_top": 0
+    "margin_left": 20,
+    "margin_top": 20
+  },
+  "variables": {
+    "product_name": {
+      "source": "product_name",
+      "transform": {
+        "type": "truncate",
+        "maxLength": 25,
+        "suffix": "..."
+      }
+    }
+  },
+  "computedFields": {
+    "qty_unit_barcode": {
+      "template": "{parts_no}-{internal_die_no}/O{qty_per_kit}{production_date}"
+    },
+    "qty_box_barcode": {
+      "template": "{parts_no}-{internal_die_no}/O{packing_pcs_per_box}{production_date}"
+    }
   },
   "defaults": {
-    "mold_no": "278-H21-00",
-    "parts_no": "RU1-0404",
-    "parts_name": "W-Kakeha_Gear",
-    "qty_unit_barcode": "*RU1-0404/360-00-26*",
-    "master_data.packing_kit": "KIT604",
-    "qty_unit": "360",
-    "rev_his": "008/009",
-    "unit_box": "1",
-    "total_qty": "360",
-    "production_date": "12-06-26",
-    "im_box": "1",
-    "shift": "1",
-    "customer": "ASSY",
-    "qty_box_barcode": "*RU1-0404/144-00-26*"
+    "mold_no": "278-B71-00",
+    "parts_no": "RC4-3940",
+    "product_name": "REJI_SHUTTER2",
+    "packing_kit": "Kit 604",
+    "die_no": "V3",
+    "internal_die_no": "V03",
+    "qty_per_kit": "1000",
+    "rev_his": "03/03",
+    "packing_kit_per_box": "4",
+    "packing_pcs_per_box": "4000",
+    "production_date": "18-06-26",
+    "label": "4",
+    "shift": "1   2",
+    "customer": "ASSY"
   }
 }

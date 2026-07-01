@@ -14,6 +14,16 @@
   ],
   "templateFile": "nidec_canon_template.zpl",
   "previewFile": "nidec_canon_template_preview.png",
+  "variables": {
+    "parts_name": {
+      "source": "parts_name",
+      "transform": {
+        "type": "truncate",
+        "maxLength": 22,
+        "suffix": "..."
+      }
+    }
+  },
   "defaults": {
     "mold_no": "278-G13-00",
     "parts_no": "RC4-3605",
